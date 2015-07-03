@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Fast-Trace</title>
+</head>
+<body>
+<canvas id="view"></canvas>
+</body>
+<script src="model.js"></script>
+<script src="render.js"></script>
+<script src="data.flow.js"></script>
+<script>
+var canvas = document.getElementById("view");
+canvas.width = 600;
+canvas.height = 480;
+
+var context = canvas.getContext("2d");
+
+
+var timeline = new Timeline();
+
+canvas.onwheel = function(ev){
+	timeline.zoom(ev.layerX / canvas.width, ev.wheelDeltaY/240);
+};
+
+canvas.onmousemove = function(ev){
+	if(ev.which === 1){
+		timeline.drag(-ev.movementX / canvas.width)
+	}
+};
+
+
+timeline.load(DATA);
+
+function loop(){
+	var size = {x:600, y:480};
+	context.clearRect(0,0,size.x,size.y);
+	RenderTimeline(context, timeline, size);
+	window.requestAnimationFrame(loop);
+}
+loop();
+</script>
+<style>
+#view {
+	box-sizing: border-box;
+	width: 600px;
+	height: 480px;
+	border: 1px solid #ccc;
+}
+</style>
+</html>
