@@ -12,6 +12,9 @@ package("ts", function(){
 		var start = timeline.view.start, end = timeline.view.end;
 		var scale = (right - left) / (end - start);
 
+		// 1px
+		var biggap = 1 * Math.abs((end - start) / (right - left));
+
 		var top = 0;
 		timeline.view.top = 0;
 
@@ -62,12 +65,19 @@ package("ts", function(){
 						if(layer.begin(i) > end){ break; }
 
 						var ls = left + (layer.begin(i) - start) * scale;
+
+						// merge small gaps
+						while(layer.end(i+1)
+							&& ((layer.begin(i+1) - layer.end(i)) < biggap)
+							&& ((layer.begin(i+1) < end))){
+							i++;
+						}
 						var rs = left + (layer.end(i) - start) * scale;
 
-						var w = (rs-ls)|0;
+						var w = Math.max((rs-ls)|0, 1);
 						w = Math.max(w, 1);
 
-						context.rect(ls|0, top, w, layerHeight);
+						context.rect(ls, top, w, layerHeight);
 					}
 
 					context.fillStyle = "hsla(" + 30 * layerIndex + ", 70%, 60%, 1)";
