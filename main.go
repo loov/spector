@@ -49,8 +49,9 @@ func main() {
 func setupScene() {
 	gl.ClearColor(1, 1, 1, 0)
 
-	//gl.Disable(gl.DEPTH_TEST)
 	gl.Disable(gl.LIGHTING)
+	gl.Enable(gl.COLOR_MATERIAL)
+	gl.Disable(gl.DEPTH_TEST)
 
 	gl.Viewport(0, 0, ScreenWidth, ScreenHeight)
 	gl.MatrixMode(gl.PROJECTION)
