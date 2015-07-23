@@ -53,7 +53,7 @@ package("spector", function(){
 	var Stage = {
 		Header:  0, // waiting for header
 		Reading: 1, // reading events
-		Stopped: 2, // after ProcStop
+		Stopped: 2, // after StreamStop
 	};
 
 	function Stream(bufferSize) {
@@ -138,10 +138,12 @@ package("spector", function(){
 		// !!! the returned object will be reused                 !!!
 		// !!! the values must be copied to the final destination !!!
 		next: function(){
-			if(this.stage === Stage.Header){
+			if (this.stage === Stage.Header) {
 				if(this.len - this.head <= Magic.length)
 					return false;
 				this.readHeader_();
+			} else if (this.stage === Stage.Stopped) {
+				throw new Error("stream has been stopped!");
 			}
 
 			if(this.head >= this.len){
@@ -158,7 +160,12 @@ package("spector", function(){
 			} else {
 				obj.read(this);
 			}
+
 			this.head += EventLen;
+			if(obj.Type === EventType.StreamStop){
+				this.stage = Stage.Stopped;
+			}
+
 			return obj;
 		}
 	};
