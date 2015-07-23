@@ -8,25 +8,25 @@ package("spector", function(){
 		StreamStart: 0x01, // ProcID MachineID Timestamp CPUFrequency
 		StreamStop:  0x02, // TimeDiff
 
-		// start & stop go routine
+		// start & stop execution thread
 		ThreadStart:   0x03, // TimeDiff ThreadID StackID
 		ThreadStop:    0x04, // TimeDiff ThreadID StackID
 
-		// begin & end a nesting event
+		// begin & end a span
 		Begin:     0x05, // TimeDiff ThreadID StackID ID
 		End:       0x06, // TimeDiff ThreadID StackID ID
 
-		// begin & end an async event
+		// start & finish an arrow
 		Start:     0x07, // TimeDiff ThreadID StackID ID
 		Finish:    0x08, // TimeDiff ThreadID StackID ID
 
 		// sample integer values
 		Sample:    0x09, // TimeDiff ThreadID StackID ValuesLen {ID Value}
 		// create a snapshot from an item
-		Snapshot:  0x0A, // TimeDiff ThreadID StackID ID Kind ContentLen Content
+		Snapshot:  0x0A, // TimeDiff ThreadID StackID ID ContentKind ContentLen Content
 
 		// provide information about a specific ID
-		Info:      0x0B, // ID Kind NameLen Name ContentLen Content
+		Info:      0x0B, // ID NameLen Name ContentKind ContentLen Content
 	};
 
 	var EventsLength = 0x00;
@@ -37,9 +37,8 @@ package("spector", function(){
 	var Kind = {
 		Invalid: 0x00,
 
-		Kind:   0x01, // adding user kinds
-		Thread: 0x02, // thread information
-		Stack:  0x03, // stack  information
+		Thread: 0x01, // thread information
+		Stack:  0x02, // stack  information
 
 		// generic types
 		Text:  0x10, // textual content
@@ -48,7 +47,7 @@ package("spector", function(){
 		Image: 0x13, // png or jpeg
 
 		// user types
-		User:  0x20, // all user types should be above this value
+		User:  0x20, // all user types should be larger than this
 	};
 
 	var Stage = {
@@ -156,9 +155,10 @@ package("spector", function(){
 			if(obj === undefined){
 				obj = new EventConstructor[obj](this);
 				this.eventPool_[type] = obj;
-				return obj;
+			} else {
+				obj.read(this);
 			}
-			obj.read(this);
+			this.head += len;
 			return obj;
 		}
 	};
@@ -168,6 +168,7 @@ package("spector", function(){
 		this.Value = value;
 	}
 
+	//TODO: generate this based on spec
 	var Event = {
 		StreamStart: function StreamStartEvent(stream){
 			// ProcID MachineID Timestamp CPUFrequency
@@ -234,7 +235,7 @@ package("spector", function(){
 			this.ThreadID = stream.readInt_();
 			this.StackID = stream.readInt_();
 
-			var count = stream.readByte_();
+			var count = stream.readInt_();
 			this.ID_Value = new Int32Array(count*2);
 			for(var i = 0; i < count; i++){
 				this.ID_Value[i*2]   = stream.readInt_();
@@ -243,23 +244,23 @@ package("spector", function(){
 		},
 		// create a snapshot from an item
 		Snapshot: function SnapshotEvent(stream){
-			// TimeDiff ThreadID StackID ID Kind ContentLen Content
+			// TimeDiff ThreadID StackID ID ContentKind ContentLen Content
 			this.TimeDiff = stream.readInt_();
 			this.ThreadID = stream.readInt_();
 			this.StackID = stream.readInt_();
 			this.ID = stream.readInt_();
-			this.Kind = stream.readByte_();
+			this.ContentKind = stream.readByte_();
 			var len = this.readInt_();
 			this.Content = stream.readBytes_(len);
 		},
 
 		// provide information about a specific ID
 		Info: function InfoEvent(stream){
-			// ID Kind NameLen Name ContentLen Content
+			// ID NameLen Name ContentKind ContentLen Content
 			this.ID = stream.readInt_();
-			this.Kind = stream.readByte_();
 			var len = this.readInt_();
 			this.Name = String.fromCharCode.apply("", stream.readBytes_(len));
+			this.ContentKind = stream.readByte_();
 			var len = this.readInt_();
 			this.Content = stream.readBytes_(len);
 		}
@@ -278,7 +279,7 @@ package("spector", function(){
 		Version: 1,
 		Event: Event,
 		EventType: EventType,
-		Kind:  Kind,
+		ContentKind:  ContentKind,
 		Stream: Stream,
 	};
 });
