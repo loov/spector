@@ -148,17 +148,17 @@ package("spector", function(){
 				return undefined;
 			}
 
-			var len  = this.readInt_();
-			var type = this.readByte_();
+			var EventLen  = this.readInt_();
+			var EventType = this.readByte_();
 
-			var obj = this.eventPool_[type];
+			var obj = this.eventPool_[EventType];
 			if(obj === undefined){
-				obj = new EventConstructor[obj](this);
-				this.eventPool_[type] = obj;
+				obj = new EventCtor[EventType](this);
+				this.eventPool_[EventType] = obj;
 			} else {
 				obj.read(this);
 			}
-			this.head += len;
+			this.head += EventLen;
 			return obj;
 		}
 	};
@@ -230,14 +230,14 @@ package("spector", function(){
 
 		// sample integer values
 		Sample: function SampleEvent(stream){
-			// TimeDiff ThreadID StackID ValuesLen:uint8 {ID Value}
+			// TimeDiff ThreadID StackID ValuesLen {ID Value}
 			this.TimeDiff = stream.readInt_();
 			this.ThreadID = stream.readInt_();
 			this.StackID = stream.readInt_();
 
-			var count = stream.readInt_();
-			this.ID_Value = new Int32Array(count*2);
-			for(var i = 0; i < count; i++){
+			var ValuesLen = stream.readInt_();
+			this.ID_Value = new Int32Array(ValuesLen*2);
+			for(var i = 0; i < ValuesLen; i++){
 				this.ID_Value[i*2]   = stream.readInt_();
 				this.ID_Value[i*2+1] = stream.readInt_();
 			}
@@ -250,7 +250,7 @@ package("spector", function(){
 			this.StackID = stream.readInt_();
 			this.ID = stream.readInt_();
 			this.ContentKind = stream.readByte_();
-			var len = this.readInt_();
+			var ContentLen = this.readInt_();
 			this.Content = stream.readBytes_(len);
 		},
 
@@ -258,26 +258,27 @@ package("spector", function(){
 		Info: function InfoEvent(stream){
 			// ID NameLen Name ContentKind ContentLen Content
 			this.ID = stream.readInt_();
-			var len = this.readInt_();
-			this.Name = String.fromCharCode.apply("", stream.readBytes_(len));
+			var NameLen = this.readInt_();
+			this.Name = String.fromCharCode.apply("", stream.readBytes_(NameLen));
 			this.ContentKind = stream.readByte_();
-			var len = this.readInt_();
-			this.Content = stream.readBytes_(len);
+			var ContentLen = this.readInt_();
+			this.Content = stream.readBytes_(ContentLen);
 		}
 	};
 
-	var EventConstructor = new Array(Object.keys(Event).length);
+	var EventCtor = new Array(Object.keys(Event).length);
 	for(var name in Event) {
 		var ctor = Event[name];
 		var type = EventType[name];
 		ctor.prototype.Type = type;
 		ctor.prototype.read = ctor;
-		EventConstructor[type] = ctor;
+		EventCtor[type] = ctor;
 	}
 
 	return {
 		Version: 1,
 		Event: Event,
+		EventCtor: EventCtor,
 		EventType: EventType,
 		ContentKind:  ContentKind,
 		Stream: Stream,
