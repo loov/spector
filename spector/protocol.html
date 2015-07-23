@@ -1,0 +1,285 @@
+<script>
+package("spector", function(){
+	var Magic = "spector";
+
+	var EventType = {
+		Invalid: 0x00,
+
+		StreamStart: 0x01, // ProcID MachineID Timestamp CPUFrequency
+		StreamStop:  0x02, // TimeDiff
+
+		// start & stop go routine
+		ThreadStart:   0x03, // TimeDiff ThreadID StackID
+		ThreadStop:    0x04, // TimeDiff ThreadID StackID
+
+		// begin & end a nesting event
+		Begin:     0x05, // TimeDiff ThreadID StackID ID
+		End:       0x06, // TimeDiff ThreadID StackID ID
+
+		// begin & end an async event
+		Start:     0x07, // TimeDiff ThreadID StackID ID
+		Finish:    0x08, // TimeDiff ThreadID StackID ID
+
+		// sample integer values
+		Sample:    0x09, // TimeDiff ThreadID StackID ValuesLen {ID Value}
+		// create a snapshot from an item
+		Snapshot:  0x0A, // TimeDiff ThreadID StackID ID Kind ContentLen Content
+
+		// provide information about a specific ID
+		Info:      0x0B, // ID Kind NameLen Name ContentLen Content
+	};
+
+	var EventsLength = 0x00;
+	for(var name in EventType) {
+		EventsLength = Math.max(EventType[name]+1, EventsLength);
+	}
+
+	var Kind = {
+		Invalid: 0x00,
+
+		Kind:   0x01, // adding user kinds
+		Thread: 0x02, // thread information
+		Stack:  0x03, // stack  information
+
+		// generic types
+		Text:  0x10, // textual content
+		JSON:  0x11, // json formatted content
+		BLOB:  0x12, // binary blob
+		Image: 0x13, // png or jpeg
+
+		// user types
+		User:  0x20, // all user types should be above this value
+	};
+
+	var Stage = {
+		Header:  0, // waiting for header
+		Reading: 1, // reading events
+		Stopped: 2, // after ProcStop
+	};
+
+	function Stream(bufferSize) {
+		this.buffer = new Uint8Array(bufferSize);
+		this.len  = 0;
+		this.head = 0; // reading head
+		this.version = 0;
+		this.stage = Stage.New;
+
+		this.lastEvent_ = new GenericEvent();
+		this.eventPool_ = new Array(EventsLength);
+	}
+
+	Stream.Stage = Stage;
+
+	Stream.prototype = {
+		readByte_: function(){
+			var val = this.buffer[this.head];
+			this.head += 1;
+			return val;
+		},
+		// TODO: use some other encoding, it's a poor choice
+		readInt_: function(){
+			var u8 = this.buffer.slice(this.head, this.head+4);
+			var uint = new Int32Array(u8);
+			var val = uint[0];
+			this.head += 4;
+			return val;
+		},
+		readBytes_: function(len){
+			if(this.head + len > this.len){
+				throw new Error("not enough data!");
+			}
+			var content = this.buffer.slice(this.head, this.head + len);
+			this.head += len;
+			return content;
+		},
+
+		collect_: function(){
+			if (this.head <= 0) { return; }
+			this.buffer.set(0, this.buffer.slice(this.head, this.len));
+			this.len = this.len - this.head;
+			this.head = 0;
+		},
+		realloc_: function(newSize){
+			var nextSize = (newSize*3/2)|0;
+			var buffer = new Uint8Array(newSize);
+			buffer.set(0, this.buffer.slice(this.head, this.len));
+			this.len = this.len - this.head;
+			this.head = 0;
+			this.buffer = buffer;
+		},
+
+		// partial content must not be appended!
+		append: function(data){
+			if(this.stage >== Stage.Stopped){
+				throw new Error("stream has been stopped and no more data can be added!");
+			}
+			if (this.len + data.length > this.buffer.length) {
+				if(this.len - this.head + data.length > this.buffer.length) {
+					this.collect_();
+				} else {
+					this.realloc(this.len + data.length);
+				}
+			}
+			this.buffer.set(this.len, data);
+		},
+
+		readHeader_: function(){
+			var magic = this.readBytes_(Magic.length);
+			for(var i = 0; i < magic.length; i++){
+				if(magic[i] !== Magic.charCodeAt(i)){
+					throw new Error("invalid magic header: " +
+						String.fromCharCode.apply("", magic));
+				}
+			}
+
+			this.version = this.readInt();
+			this.stage = Stage.Reading;
+		},
+
+		// !!! the returned object will be reused                 !!!
+		// !!! the values must be copied to the final destination !!!
+		next: function(){
+			if(this.stage === Stage.Header){
+				if(this.len - this.head <= Magic.length)
+					return false;
+				this.readHeader_();
+			}
+
+			if(this.head >= this.len){
+				return undefined;
+			}
+
+			var len  = this.readInt_();
+			var type = this.readByte_();
+
+			var obj = this.eventPool_[type];
+			if(obj === undefined){
+				obj = new EventConstructor[obj](this);
+				this.eventPool_[type] = obj;
+				return obj;
+			}
+			obj.read(this);
+			return obj;
+		}
+	};
+
+	function Value(id, value) {
+		this.ID = id;
+		this.Value = value;
+	}
+
+	var Event = {
+		StreamStart: function StreamStartEvent(stream){
+			// ProcID MachineID Timestamp CPUFrequency
+			this.ProcID       = stream.readInt_();
+			this.MachineID    = stream.readInt_();
+			this.Timestamp    = stream.readInt_();
+			this.CPUFrequency = stream.readInt_();
+		},
+		StreamStop: function StreamStopEvent(stream){
+			// TimeDiff
+			this.TimeDiff = stream.readInt_();
+		},
+
+		// start & stop go routine
+		ThreadStart: function ThreadStartEvent(stream){
+			// TimeDiff ThreadID StackID
+			this.TimeDiff = stream.readInt_();
+			this.ThreadID = stream.readInt_();
+			this.StackID = stream.readInt_();
+		},
+		ThreadStop: function ThreadStopEvent(stream){
+			// TimeDiff ThreadID StackID
+			this.TimeDiff = stream.readInt_();
+			this.ThreadID = stream.readInt_();
+			this.StackID = stream.readInt_();
+		},
+
+		// begin & end a nesting event
+		Begin: function BeginEvent(stream){
+			// TimeDiff ThreadID StackID ID
+			this.TimeDiff = stream.readInt_();
+			this.ThreadID = stream.readInt_();
+			this.StackID = stream.readInt_();
+			this.ID = stream.readInt_();
+		},
+		End: function EndEvent(stream){
+			// TimeDiff ThreadID StackID ID
+			this.TimeDiff = stream.readInt_();
+			this.ThreadID = stream.readInt_();
+			this.StackID = stream.readInt_();
+			this.ID = stream.readInt_();
+		},
+
+		// begin & end an async event
+		Start: function StartEvent(stream){
+			// TimeDiff ThreadID StackID ID
+			this.TimeDiff = stream.readInt_();
+			this.ThreadID = stream.readInt_();
+			this.StackID = stream.readInt_();
+			this.ID = stream.readInt_();
+		},
+		Finish: function FinishEvent(stream){
+			// TimeDiff ThreadID StackID ID
+			this.TimeDiff = stream.readInt_();
+			this.ThreadID = stream.readInt_();
+			this.StackID = stream.readInt_();
+			this.ID = stream.readInt_();
+		},
+
+		// sample integer values
+		Sample: function SampleEvent(stream){
+			// TimeDiff ThreadID StackID ValuesLen:uint8 {ID Value}
+			this.TimeDiff = stream.readInt_();
+			this.ThreadID = stream.readInt_();
+			this.StackID = stream.readInt_();
+
+			var count = stream.readByte_();
+			this.ID_Value = new Int32Array(count*2);
+			for(var i = 0; i < count; i++){
+				this.ID_Value[i*2]   = stream.readInt_();
+				this.ID_Value[i*2+1] = stream.readInt_();
+			}
+		},
+		// create a snapshot from an item
+		Snapshot: function SnapshotEvent(stream){
+			// TimeDiff ThreadID StackID ID Kind ContentLen Content
+			this.TimeDiff = stream.readInt_();
+			this.ThreadID = stream.readInt_();
+			this.StackID = stream.readInt_();
+			this.ID = stream.readInt_();
+			this.Kind = stream.readByte_();
+			var len = this.readInt_();
+			this.Content = stream.readBytes_(len);
+		},
+
+		// provide information about a specific ID
+		Info: function InfoEvent(stream){
+			// ID Kind NameLen Name ContentLen Content
+			this.ID = stream.readInt_();
+			this.Kind = stream.readByte_();
+			var len = this.readInt_();
+			this.Name = String.fromCharCode.apply("", stream.readBytes_(len));
+			var len = this.readInt_();
+			this.Content = stream.readBytes_(len);
+		}
+	};
+
+	var EventConstructor = new Array(Object.keys(Event).length);
+	for(var name in Event) {
+		var ctor = Event[name];
+		var type = EventType[name];
+		ctor.prototype.Type = type;
+		ctor.prototype.read = ctor;
+		EventConstructor[type] = ctor;
+	}
+
+	return {
+		Version: 1,
+		Event: Event,
+		EventType: EventType,
+		Kind:  Kind,
+		Stream: Stream,
+	};
+});
+</script>
