@@ -1,0 +1,58 @@
+<link rel="import" href="/spector/stream.html">
+<link rel="import" href="/spector/protocol.html">
+<script>
+package("spector.sim", function(){
+
+	function Thread(){
+		this.maxOpen_ = props.open;
+		this.maxAsync_ = props.async;
+		this.maxTimeDiff_ = 100;
+
+		this.open_  = {};
+		this.async_ = {};
+	}
+
+	function Stream(props) {
+		this.buffer_ = [];
+		this.stage = spector.Stream.Stage.Reading;
+
+		this.threads_ = [];
+
+		this.timer_ = window.setTimer(
+			this.emit_.bind(this),
+			props.emitInterval
+		);
+	}
+
+	var Event = spector.Event;
+
+	Stream.prototype = {
+		emit_: function(){
+			var r = Math.random();
+			if(r < 0.8) {
+				var r = Math.random();
+				if( (Object.keys(this.open_).length > this.maxOpen_) || (r < 0.5) ){
+					// emit close
+				} else {
+					// emit open
+				}
+			} else {
+
+			}
+		},
+		close: function(){
+			window.clearTimer(this.timer_);
+		},
+		next: function(){
+			if(this.buffer_.length <= 0) {
+				return undefined;
+			}
+			return this.buffer_.shift();
+		}
+	};
+
+	return {
+		Stream: Stream
+	};
+});
+</script>
