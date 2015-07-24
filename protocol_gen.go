@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 )
@@ -152,6 +153,8 @@ var Funcs = template.FuncMap{
 }
 
 var JS = template.Must(template.New("").Funcs(Funcs).Parse(`
+<!-- GENERATED CODE -->
+<!-- DO NOT MODIFY MANUALLY -->
 <script>
 package("spector", function(){
 	var Event = {};
@@ -201,5 +204,8 @@ func main() {
 		"ContentKinds": ContentKinds,
 	}))
 
-	check(ioutil.WriteFile(filepath.Join("spector", "protocol.html"), buf.Bytes(), 0777))
+	bytes := buf.Bytes()
+	rx := regexp.MustCompile(`(?m)\s+$`)
+	bytes = rx.ReplaceAll(bytes, []byte{})
+	check(ioutil.WriteFile(filepath.Join("spector", "protocol.html"), bytes, 0777))
 }
