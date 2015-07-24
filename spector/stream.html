@@ -1,4 +1,4 @@
-<link rel="import" href="/spector/utf8.html">
+<link rel="import" href="/spector/util/utf8.html">
 <link rel="import" href="/spector/protocol.html">
 <script>
 package("spector", function(){
@@ -94,7 +94,7 @@ package("spector", function(){
 		readUTF8: function(){
 			var count = this.readInt();
 			var bytes = this.read_(count);
-			return utf8.decode(bytes);
+			return spector.util.utf8.decode(bytes);
 		},
 		readValues: function(){
 			var count = this.readInt();
