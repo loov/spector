@@ -40,7 +40,7 @@ package("spector", function(){
 
 		// partial content must not be appended!
 		write_: function(data){
-			if(this.stage >== Stage.Stopped){
+			if(this.stage >= Stage.Stopped){
 				throw new Error("stream has been stopped and no more data can be added!");
 			}
 			if (this.len + data.length > this.buffer.length) {

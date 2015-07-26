@@ -48,28 +48,30 @@ var Events = []*Event{
 	{Name: "Invalid", Spec: "Code:Byte=0x00"},
 
 	// start & stop stream
-	{Name: "StreamStart", Spec: "Code:Byte=0x01 ProcID MachineID Timestamp CPUFrequency"},
-	{Name: "StreamStop", Spec: "Code:Byte=0x02 TimeDiff"},
+	{Name: "StreamStart", Spec: "Code:Byte=0x01 ProcessID MachineID Time CPUFrequency"},
+	{Name: "StreamStop", Spec: "Code:Byte=0x02 Time"},
 
 	// start & stop execution thread
-	{Name: "ThreadStart", Spec: "Code:Byte=0x03 TimeDiff ThreadID StackID"},
-	{Name: "ThreadStop", Spec: "Code:Byte=0x04 TimeDiff ThreadID StackID"},
+	{Name: "ThreadStart", Spec: "Code:Byte=0x03 Time ThreadID StackID"},
+	{Name: "ThreadSleep", Spec: "Code:Byte=0x04 Time ThreadID StackID"},
+	{Name: "ThreadWake", Spec: "Code:Byte=0x05 Time ThreadID StackID"},
+	{Name: "ThreadStop", Spec: "Code:Byte=0x06 Time ThreadID StackID"},
 
 	// begin & end a span
-	{Name: "Begin", Spec: "Code:Byte=0x05 TimeDiff ThreadID StackID ID"},
-	{Name: "End", Spec: "Code:Byte=0x06 TimeDiff ThreadID StackID ID"},
+	{Name: "Begin", Spec: "Code:Byte=0x07 Time ThreadID StackID ID"},
+	{Name: "End", Spec: "Code:Byte=0x08 Time ThreadID StackID ID"},
 
 	// start & finish an arrow
-	{Name: "Start", Spec: "Code:Byte=0x07 TimeDiff ThreadID StackID ID"},
-	{Name: "Finish", Spec: "Code:Byte=0x08 TimeDiff ThreadID StackID ID"},
+	{Name: "Start", Spec: "Code:Byte=0x09 Time ThreadID StackID ID"},
+	{Name: "Finish", Spec: "Code:Byte=0x0A Time ThreadID StackID ID"},
 
 	// sample integer values
-	{Name: "Sample", Spec: "Code:Byte=0x09 TimeDiff ThreadID StackID Values:Values"},
+	{Name: "Sample", Spec: "Code:Byte=0x0B Time ThreadID StackID Values:Values"},
 	// create a snapshot from an item
-	{Name: "Snapshot", Spec: "Code:Byte=0x0A TimeDiff ThreadID StackID ID ContentKind:Byte Content:Blob"},
+	{Name: "Snapshot", Spec: "Code:Byte=0x0C Time ThreadID StackID ID ContentKind:Byte Content:Blob"},
 
 	// provide information about a specific ID
-	{Name: "Info", Spec: "Code:Byte=0x0B ID Name:UTF8 ContentKind:Byte Content:Blob"},
+	{Name: "Info", Spec: "Code:Byte=0x0D ID Name:UTF8 ContentKind:Byte Content:Blob"},
 }
 
 type ContentKind struct {

@@ -2,9 +2,45 @@
 <link rel="import" href="/spector/stream.html">
 <script>
 package("spector", function(){
-	function Trace(){
+	var ValueArray = Array;
+	var TimeArray  = Array;
+	var IDArray    = Array;
 
+	function Thread(threadID, timestamp){
+		this.ThreadID  = threadID;
+		this.Timestamp = timestamp;
 	}
+	Thread.prototype = {
+	};
+
+
+	function Process(processID, machineID, timestamp, cpufreq){
+		this.ProcessID = processID;
+		this.MachineID = machineID;
+		this.Timestamp = timestamp;
+		this.CPUFrequency = cpufreq;
+
+		this.start = timestamp;
+		this.end   = undefined;
+
+		this.threads = new Array();
+	}
+	Process.prototype = {
+		threadByID: function(threadID) {
+
+		}
+	};
+
+
+	function Trace(){
+		this.processes = new Array();
+	}
+
+	Trace.prototype = {
+		processByID: function(processID) {
+
+		}
+	};
 
 	return {
 		Trace: Trace
