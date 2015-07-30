@@ -210,7 +210,7 @@ func main() {
 	}))
 
 	bytes := buf.Bytes()
-	rx := regexp.MustCompile(`(?m)\s+$`)
+	rx := regexp.MustCompile(`(?m)[ \t]+$`)
 	bytes = rx.ReplaceAll(bytes, []byte{})
 	check(ioutil.WriteFile(filepath.Join("spector", "protocol.html"), bytes, 0777))
 }
