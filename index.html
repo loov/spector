@@ -17,20 +17,42 @@
 	<link rel="shortcut icon" href="/assets/ico/24.png">
 </head>
 <body>
-	<pre id="content"></pre>
+	<canvas id="view"></canvas>
+
+	<style>
+		* { box-sizing: border-box; }
+		#view {
+			position: fixed;
+			top: 0; left: 0;
+			border: 1px solid #000;
+		}
+	</style>
 
 	<link rel="import" href="/spector/import/simulator.html">
 	<link rel="import" href="/spector/import/tracing.html">
 	<link rel="import" href="/spector/trace.html">
-	<link rel="import" href="/spector/view.html">
+	<link rel="import" href="/spector/trace.view.html">
+
 	<script>
 		var stream = new spector.import.simulator.Stream();
 		var trace = new spector.Trace();
+		var traceview = new spector.Trace.View();
 
-		window.setInterval(function(){
+		var canvas = document.getElementById("view");
+		var context = canvas.getContext("2d");
+
+		var interval = window.setInterval(function(){
+			canvas.width = window.innerWidth - 4;
+			canvas.height = window.innerHeight - 4;
+			var size = {x: canvas.width, y: canvas.height};
+			context.clearRect(0, 0, size.x, size.y);
+
 			trace.consume(stream);
-			var el = document.getElementById("content");
-			el.innerHTML = JSON.stringify(trace, undefined, 4);
-		}, 300);
+			traceview.render(context, trace, size);
+		}, 30);
+
+		window.setTimeout(function(){
+			window.clearInterval(interval);
+		}, 20000);
 	</script>
 </body>

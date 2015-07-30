@@ -8,14 +8,73 @@ package("spector", function(){
 	var TimeArray  = Array;
 	var IDArray    = Array;
 
+
+	function Layer(){
+		this.time_ = new TimeArray();
+		this.id_ = new IDArray();
+	}
+
+	Layer.prototype = {
+		get timepairs(){ return this.time_; },
+		get IDs(){ return this.id_; },
+		get lastTime(){
+			if(this.time_.length == 0){ return -Infinity; }
+			return this.time_[this.time_.length-1];
+		},
+		get lastID(){
+			return this.id_[this.id_.length-1];
+		},
+
+		beginEvent: function(id, time){
+			assert(this.lastTime <= time);
+			this.time_.push(time);
+			this.time_.push(Infinity);
+			this.id_.push(id);
+		},
+		endEvent: function(id, time){
+			assert(this.lastID === id);
+			this.time_[this.time_.length-1] = time;
+		}
+	};
+
 	function Thread(threadID, time){
 		this.ThreadID  = threadID;
 		this.Time = time;
 
-		this.start = undefined;
+		this.start = time;
 		this.stop  = undefined;
+		this.layers = [];
 	}
 	Thread.prototype = {
+		getOpenLayer: function(time){
+			var layers = this.layers;
+			for(var i = 0; i < layers.length; i++){
+				if(layers[i].lastTime <= time){
+					return layers[i];
+				}
+			}
+
+			var layer = new Layer();
+			layers.push(layer);
+			return layer;
+		},
+		getLayerWith: function(id){
+			var layers = this.layers;
+			for(var i = 0; i < layers.length; i++){
+				if(layers[i].lastID === id){
+					return layers[i];
+				}
+			}
+			return undefined;
+		},
+		stopLayers: function(time){
+			var layers = this.layers;
+			for(var i = 0; i < layers.length; i++){
+				if(!isFinite(layers[i].lastTime)){
+					layers[i].endEvent(layers[i].lastID, time);
+				}
+			}
+		}
 	};
 
 	function Track(){
@@ -149,8 +208,6 @@ package("spector", function(){
 		assert(proc !== undefined);
 
 		var thread = new Thread(event.ThreadID, event.Time);
-		thread.start = event.Time;
-
 		var track = proc.getOpenTrack(event.Time);
 		track.threads.push(thread);
 		proc.threads.push(thread);
@@ -163,6 +220,7 @@ package("spector", function(){
 		var thread = proc.threadByID(event.ThreadID);
 		thread.Time = event.Time;
 		thread.stop = event.Time;
+		thread.stopLayers(event.Time);
 	});
 
 	when(code.ThreadSleep, function(cache, trace, event){
@@ -173,6 +231,29 @@ package("spector", function(){
 	when(code.ThreadWake, function(cache, trace, event){
 		var proc = cache.TraceProcess;
 		assert(proc !== undefined);
+	});
+
+
+	when(code.Begin, function(cache, trace, event){
+		var proc = cache.TraceProcess;
+		assert(proc !== undefined);
+
+		var thread = proc.threadByID(event.ThreadID);
+		thread.Time = event.Time;
+
+		var layer = thread.getOpenLayer(event.Time);
+		layer.beginEvent(event.ID, event.Time);
+	});
+
+	when(code.End, function(cache, trace, event){
+		var proc = cache.TraceProcess;
+		assert(proc !== undefined);
+
+		var thread = proc.threadByID(event.ThreadID);
+		thread.Time = event.Time;
+
+		var layer = thread.getLayerWith(event.ID);
+		layer.endEvent(event.ID, event.Time);
 	});
 
 	return {

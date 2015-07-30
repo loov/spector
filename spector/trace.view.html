@@ -1,0 +1,105 @@
+<link rel="import" href="/spector/protocol.html">
+<link rel="import" href="/spector/stream.html">
+<link rel="import" href="/spector/trace.html">
+
+<script>
+package("spector.Trace", function(){
+	"use strict";
+
+	function View(){
+
+	}
+
+	View.prototype = {
+		render: function(ctx, trace, size){
+			var Y = 0;
+			var X = 0;
+			ctx.font = "Courier New";
+
+			function LargeHeader(text, height, L){
+				ctx.fillStyle = "hsla(0,0%," + L + "%,1)";
+				ctx.fillRect(0, Y, size.x, height);
+				Y += height;
+
+				ctx.fillStyle = "hsla(0,0%," + (100 - L) + "%,1)";
+				ctx.font = height + "px";
+				ctx.fillText(text, 4, Y - 5);
+			}
+
+			function HLine(L){
+				ctx.fillStyle = "hsla(0,0%," + L + "%,1)";
+				ctx.fillRect(0, Y, size.x, 1);
+				Y += 1;
+			}
+
+			trace.processes.map(function(p){
+				var Start = p.start,
+					End   = p.Time,
+					Span  = End - Start,
+					timepx = Span / size.x;
+
+				function tx(x){
+					if(x == undefined){ return size.x; }
+					var v = ((x - Start) * size.x / Span);
+					if(v > size.x){ v = size.x; }
+					return v | 0;
+				}
+
+				function TrackMarker(id, start, stop, totalHeight){
+					ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,90%,1)";
+
+					var x0 = tx(start);
+					var x1 = tx(stop);
+					ctx.fillRect(x0, Y, x1 - x0, totalHeight);
+
+					ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,50%,1)";
+					ctx.font = "8px";
+					ctx.fillText(id, x0 + 2, Y + 10);
+				}
+
+				LargeHeader(p.MachineID + " > " + p.ProcessID, 18, 95);
+				p.tracks.map(function(track){
+					Y = Y + 4;
+
+					var MaxY = Y + 20,
+						baseY = Y;
+
+					track.threads.map(function(t){
+
+						function EventSpan(id, depth, start, stop, h){
+							ctx.fillStyle = "hsla(" + ((id * 11)%360) + ",40%," + (70 + (depth*20)|0) + "%,1)";
+
+							var x0 = tx(start);
+							var x1 = tx(stop);
+							ctx.fillRect(x0, Y, x1 - x0, h);
+						}
+
+						TrackMarker(t.ThreadID, t.start, t.stop, t.layers.length*10 + 2);
+
+						var layerlen = t.layers.length;
+						t.layers.map(function(layer, i){
+							var pairs = layer.timepairs;
+							var ids   = layer.IDs;
+							for(var i = 0; i < pairs.length; i += 2){
+								EventSpan(ids[i/2], i/layerlen, pairs[i], pairs[i+1], 10);
+							}
+							Y += 10;
+						});
+
+						Y += 4;
+
+						MaxY = Math.max(MaxY, Y);
+						Y = baseY;
+					});
+
+					Y = MaxY;
+				});
+			});
+		}
+	};
+
+	return {
+		View: View
+	};
+});
+</script>
