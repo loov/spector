@@ -12,8 +12,8 @@ package("spector", function(){
 		this.ThreadID  = threadID;
 		this.Time = time;
 
-		this.begin = undefined;
-		this.end  = undefined;
+		this.start = undefined;
+		this.stop  = undefined;
 	}
 	Thread.prototype = {
 	};
@@ -24,16 +24,16 @@ package("spector", function(){
 	Track.prototype = {
 		get first(){ return this.threads[0]; },
 		get last(){ return this.threads[this.threads.length-1]; },
-		get begin(){
+		get start(){
 			var first = this.first;
 			if(first === undefined) { return Infinity; }
-			return first.begin;
+			return first.start;
 		},
-		get end(){
+		get stop(){
 			var last = this.last;
 			if(last === undefined){ return -Infinity; }
-			if(last.end === undefined){ return Infinity; }
-			return last.end;
+			if(last.stop === undefined){ return Infinity; }
+			return last.stop;
 		}
 	};
 
@@ -43,8 +43,8 @@ package("spector", function(){
 		this.Time = time;
 		this.CPUFrequency = cpufreq;
 
-		this.begin = time;
-		this.end   = undefined;
+		this.start = time;
+		this.stop  = undefined;
 
 		this.threads = new Array();
 		this.tracks  = new Array();
@@ -53,7 +53,7 @@ package("spector", function(){
 		getOpenTrack: function(time){
 			var tracks = this.tracks;
 			for(var i = 0; i < tracks.length; i++){
-				if(tracks[i].end <= time) {
+				if(tracks[i].stop <= time) {
 					return tracks[i];
 				}
 			}
@@ -149,7 +149,7 @@ package("spector", function(){
 		assert(proc !== undefined);
 
 		var thread = new Thread(event.ThreadID, event.Time);
-		thread.begin = event.Time;
+		thread.start = event.Time;
 
 		var track = proc.getOpenTrack(event.Time);
 		track.threads.push(thread);
@@ -162,7 +162,7 @@ package("spector", function(){
 
 		var thread = proc.threadByID(event.ThreadID);
 		thread.Time = event.Time;
-		thread.end = event.Time;
+		thread.stop = event.Time;
 	});
 
 	when(code.ThreadSleep, function(cache, trace, event){
