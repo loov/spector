@@ -161,11 +161,12 @@ var JS = template.Must(template.New("").Funcs(Funcs).Parse(`
 package("spector", function(){
 	var Event = {};
 	var EventByCode = {};
+	var EventCode = {};
 
 	{{ range $event := .Events }}
 	Event.{{$event.Name}} = {{$event.Name}}Event;
 	{{$event.Name}}Event.Code = {{$event.Code}};
-	{{$event.Name}}Event.prototype.Code = {{$event.Code}};
+	EventCode.{{$event.Name}} = {{$event.Code}};
 	EventByCode[{{$event.Code}}] = {{$event.Name}}Event;
 	function {{$event.Name}}Event(props){
 		props = props !== undefined ? props : {};
@@ -174,6 +175,7 @@ package("spector", function(){
 	};
 
 	{{$event.Name}}Event.prototype = {
+		Code: {{$event.Code}},
 		read: function(stream){ {{ range $field := $event.Fields }}
 			this.{{$field.Name}} = stream.read{{$field.Type}}();{{ end }}
 		},
@@ -191,6 +193,7 @@ package("spector", function(){
 	return {
 		Version: {{ .Version }},
 		Event: Event,
+		EventCode: EventCode,
 		EventByCode: EventByCode,
 		ContentKind: ContentKind
 	};

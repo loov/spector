@@ -2,45 +2,178 @@
 <link rel="import" href="/spector/stream.html">
 <script>
 package("spector", function(){
+	"use strict";
+	// Trace is the ViewModel for main display
 	var ValueArray = Array;
 	var TimeArray  = Array;
 	var IDArray    = Array;
 
-	function Thread(threadID, timestamp){
+	function Thread(threadID, time){
 		this.ThreadID  = threadID;
-		this.Timestamp = timestamp;
+		this.Time = time;
+
+		this.begin = undefined;
+		this.end  = undefined;
 	}
 	Thread.prototype = {
 	};
 
-
-	function Process(processID, machineID, timestamp, cpufreq){
-		this.ProcessID = processID;
-		this.MachineID = machineID;
-		this.Timestamp = timestamp;
-		this.CPUFrequency = cpufreq;
-
-		this.start = timestamp;
-		this.end   = undefined;
-
-		this.threads = new Array();
+	function Track(){
+		this.threads = [];
 	}
-	Process.prototype = {
-		threadByID: function(threadID) {
-
+	Track.prototype = {
+		get first(){ return this.threads[0]; },
+		get last(){ return this.threads[this.threads.length-1]; },
+		get begin(){
+			var first = this.first;
+			if(first === undefined) { return Infinity; }
+			return first.begin;
+		},
+		get end(){
+			var last = this.last;
+			if(last === undefined){ return -Infinity; }
+			if(last.end === undefined){ return Infinity; }
+			return last.end;
 		}
 	};
 
+	function Process(processID, machineID, time, cpufreq){
+		this.ProcessID = processID;
+		this.MachineID = machineID;
+		this.Time = time;
+		this.CPUFrequency = cpufreq;
+
+		this.begin = time;
+		this.end   = undefined;
+
+		this.threads = new Array();
+		this.tracks  = new Array();
+	}
+	Process.prototype = {
+		getOpenTrack: function(time){
+			var tracks = this.tracks;
+			for(var i = 0; i < tracks.length; i++){
+				if(tracks[i].end <= time) {
+					return tracks[i];
+				}
+			}
+
+			var track = new Track();
+			tracks.push(track);
+			return track;
+		},
+		threadByID: function(threadID) {
+			var threads = this.threads;
+			for(var i = 0; i < threads.length; i++){
+				if(threads[i].ThreadID == threadID){
+					return threads[i];
+				}
+			}
+			return undefined;
+		}
+	};
+
+	function nowms() { return (new Date()).getTime(); }
 
 	function Trace(){
 		this.processes = new Array();
 	}
 
 	Trace.prototype = {
-		processByID: function(processID) {
+		processByID: function(pid, mid) {
+			var procs = this.processes;
+			for(var i = 0; i < procs.length; i++){
+				if((procs[i].ProcessID == pid) && (procs[i].MachineID == mid)){
+					return procs[i];
+				}
+			}
+			return undefined;
+		},
 
+		consume: function(stream, maxMillis) {
+			maxMillis = maxMillis || 1000;
+			var start = nowms();
+			main:
+			while(nowms() - start < maxMillis){
+				for(var i = 0; i < 8; i++){
+					var ev = stream.next();
+					if(ev === undefined){
+						break main;
+					}
+
+					var fn = accept[ev.Code];
+					if(fn === undefined){
+						console.log("unhandled", ev.Code, ev);
+						continue;
+					}
+
+					var cache = stream.meta;
+					if(cache.TraceProcess !== undefined){
+						if(ev.Time !== undefined){
+							cache.TraceProcess.Time = ev.Time;
+						}
+					}
+
+					fn(cache, this, ev);
+				}
+			}
 		}
 	};
+
+	function assert(ok, msg){
+		if(!ok){ throw new Error(msg); }
+	}
+
+	var accept = {};
+	function when(code, fn){ accept[code] = fn; }
+
+	var code = spector.EventCode;
+	when(code.StreamStart, function(cache, trace, event){
+		var proc = new Process(
+			event.ProcessID,
+			event.MachineID,
+			event.Time,
+			event.CPUFrequency
+		);
+		cache.TraceProcess = proc;
+
+		trace.processes.push(proc);
+	});
+
+	when(code.StreamStop, function(cache, trace, event){
+		cache.TraceProcess = undefined;
+	});
+
+	when(code.ThreadStart, function(cache, trace, event){
+		var proc = cache.TraceProcess;
+		assert(proc !== undefined);
+
+		var thread = new Thread(event.ThreadID, event.Time);
+		thread.begin = event.Time;
+
+		var track = proc.getOpenTrack(event.Time);
+		track.threads.push(thread);
+		proc.threads.push(thread);
+	});
+
+	when(code.ThreadStop, function(cache, trace, event){
+		var proc = cache.TraceProcess;
+		assert(proc !== undefined);
+
+		var thread = proc.threadByID(event.ThreadID);
+		thread.Time = event.Time;
+		thread.end = event.Time;
+	});
+
+	when(code.ThreadSleep, function(cache, trace, event){
+		var proc = cache.TraceProcess;
+		assert(proc !== undefined);
+	});
+
+	when(code.ThreadWake, function(cache, trace, event){
+		var proc = cache.TraceProcess;
+		assert(proc !== undefined);
+	});
 
 	return {
 		Trace: Trace
