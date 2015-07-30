@@ -46,15 +46,18 @@ package("spector.Trace", function(){
 				}
 
 				function TrackMarker(id, start, stop, totalHeight){
-					ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,90%,1)";
-
 					var x0 = tx(start);
 					var x1 = tx(stop);
-					ctx.fillRect(x0, Y, x1 - x0, totalHeight);
 
+					Y += 10;
 					ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,50%,1)";
 					ctx.font = "8px";
-					ctx.fillText(id, x0 + 2, Y + 10);
+					ctx.fillText(id, x0 + 2, Y);
+					Y += 2;
+
+					ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,90%,1)";
+					ctx.fillRect(x0, Y, x1 - x0, totalHeight);
+
 				}
 
 				LargeHeader(p.MachineID + " > " + p.ProcessID, 18, 95);
@@ -67,7 +70,7 @@ package("spector.Trace", function(){
 					track.threads.map(function(t){
 
 						function EventSpan(id, depth, start, stop, h){
-							ctx.fillStyle = "hsla(" + ((id * 11)%360) + ",40%," + (70 + (depth*20)|0) + "%,1)";
+							ctx.fillStyle = "hsla(" + ((id * 11)%360) + ",40%," + (60 + (depth*20)|0) + "%,1)";
 
 							var x0 = tx(start);
 							var x1 = tx(stop);
@@ -77,11 +80,15 @@ package("spector.Trace", function(){
 						TrackMarker(t.ThreadID, t.start, t.stop, t.layers.length*10 + 2);
 
 						var layerlen = t.layers.length;
-						t.layers.map(function(layer, i){
+						t.layers.map(function(layer, layeri){
 							var pairs = layer.timepairs;
 							var ids   = layer.IDs;
 							for(var i = 0; i < pairs.length; i += 2){
-								EventSpan(ids[i/2], i/layerlen, pairs[i], pairs[i+1], 10);
+								EventSpan(
+									ids[i/2],
+									(layerlen-layeri-1)/layerlen,
+									pairs[i], pairs[i+1],
+									10);
 							}
 							Y += 10;
 						});
