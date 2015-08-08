@@ -41,7 +41,7 @@
 		var canvas = document.getElementById("view");
 		var context = canvas.getContext("2d");
 
-		var interval = window.setInterval(function(){
+		function render(){
 			canvas.width = window.innerWidth - 4;
 			canvas.height = window.innerHeight - 4;
 			var size = {x: canvas.width, y: canvas.height};
@@ -49,10 +49,9 @@
 
 			trace.consume(stream);
 			traceview.render(context, trace, size);
-		}, 30);
+			requestAnimationFrame(render);
+		}
 
-		window.setTimeout(function(){
-			window.clearInterval(interval);
-		}, 20000);
+		render();
 	</script>
 </body>
