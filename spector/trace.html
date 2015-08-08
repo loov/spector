@@ -136,9 +136,31 @@ package("spector", function(){
 
 	function Trace(){
 		this.processes = new Array();
+		this.totalEventCount = 0;
 	}
 
 	Trace.prototype = {
+		get begin(){
+			var procs = this.processes;
+			if(procs.length === 0){ return 0; }
+
+			var start = procs[0].start;
+			for(var i = 1; i < procs.length; i+=1){
+				start = Math.min(start, procs[i].start);
+			}
+			return start;
+		},
+		get end(){
+			var procs = this.processes;
+			if(procs.length === 0){ return 0; }
+
+			var end = procs[0].Time;
+			for(var i = 1; i < procs.length; i+=1){
+				end = Math.max(end, procs[i].Time);
+			}
+			return end;
+		},
+
 		processByID: function(pid, mid) {
 			var procs = this.processes;
 			for(var i = 0; i < procs.length; i++){
@@ -165,6 +187,8 @@ package("spector", function(){
 						console.log("unhandled", ev.Code, ev);
 						continue;
 					}
+
+					this.totalEventCount += 1;
 
 					var cache = stream.meta;
 					if(cache.TraceProcess !== undefined){

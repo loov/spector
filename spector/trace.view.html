@@ -6,102 +6,138 @@
 package("spector.Trace", function(){
 	"use strict";
 
+	function UI(context, size, trace){
+		this.context = context;
+		this.size = size;
+		this.Y = 0;
+
+		this.begin = trace.begin;
+		this.end   = trace.end;
+		this.timespan  = this.end - this.begin;
+		this.px    = this.timespan / size.x;
+	}
+
+	UI.prototype = {
+		font: function(fontName) {
+			this.context.font = fontName;
+		},
+		h1: function(text, height, color, background){
+			var ctx = this.context;
+
+			ctx.fillStyle = background;
+			ctx.fillRect(0, this.Y, this.size.x, height);
+			this.Y += height;
+
+			ctx.fillStyle = color;
+			ctx.font = height + "px";
+			ctx.fillText(text, 4, this.Y - 5);
+		},
+		hr: function(color, height){
+			var ctx = this.context;
+
+			height = height || 1;
+			ctx.fillStyle = color;
+			ctx.fillRect(0, this.Y, this.size.x, height);
+			this.Y += height;
+		},
+		pad: function(height){
+			this.Y += height;
+		},
+
+		trX: function(x){
+			if(x == undefined){ return this.size.x; }
+			var v = ((x - this.begin) * this.size.x / this.timespan);
+			if(v > this.size.x){ v = this.size.x; }
+			return v | 0;
+		},
+
+		block: function(id, start, stop, height){
+			var ctx = this.context;
+
+			var x0 = this.trX(start);
+			var x1 = this.trX(stop);
+
+			this.Y += 10;
+			ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,50%,1)";
+			ctx.font = "8px";
+			ctx.fillText(id, x0 + 2, this.Y);
+			this.Y += 2;
+
+			ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,90%,1)";
+			ctx.fillRect(x0, this.Y, x1 - x0, height);
+		},
+
+		spans: function(ids, pairs, depth, height){
+			var ctx = this.context;
+			ctx.fillStyle = "hsla(0,40%," + (60 + (depth*20)|0) + "%,1)";
+
+			var mingap = this.px;
+			for(var i = 0; i < pairs.length; i += 2){
+				if(pairs[i+1] < this.begin){ continue; }
+				if(pairs[i] > this.end){ break; }
+
+				var start = pairs[i];
+				// connect small gaps
+				while(pairs[i+2] - pairs[i+1] < mingap){
+					i += 2;
+				}
+				var stop = pairs[i+1];
+
+				var x0 = this.trX(start);
+				var x1 = this.trX(stop);
+				ctx.fillRect(x0, this.Y, x1 - x0, height);
+			}
+			this.Y += height;
+		}
+	};
+
+
 	function View(){
 
 	}
 
 	View.prototype = {
 		render: function(ctx, trace, size){
-			var Y = 0;
-			var X = 0;
-			ctx.font = "Courier New";
+			var ui = new UI(ctx, size, trace);
 
-			function LargeHeader(text, height, L){
-				ctx.fillStyle = "hsla(0,0%," + L + "%,1)";
-				ctx.fillRect(0, Y, size.x, height);
-				Y += height;
+			ui.font("Courier New");
+			ui.h1(trace.totalEventCount, 18, "#fff", "#000");
 
-				ctx.fillStyle = "hsla(0,0%," + (100 - L) + "%,1)";
-				ctx.font = height + "px";
-				ctx.fillText(text, 4, Y - 5);
-			}
+			for(var pi = 0; pi < trace.processes.length; pi += 1){
+				var proc = trace.processes[pi];
+				ui.h1(proc.MachineID + " > " + proc.ProcessID, 18, "#333", "#eee");
 
-			function HLine(L){
-				ctx.fillStyle = "hsla(0,0%," + L + "%,1)";
-				ctx.fillRect(0, Y, size.x, 1);
-				Y += 1;
-			}
+				for(var ti = 0; ti < proc.tracks.length; ti += 1){
+					var track = proc.tracks[ti];
+					ui.pad(4);
 
-			trace.processes.map(function(p){
-				var Start = p.start,
-					End   = p.Time,
-					Span  = End - Start,
-					timepx = Span / size.x;
+					var MaximumY = ui.Y;
+					var BaseY = ui.Y;
 
-				function tx(x){
-					if(x == undefined){ return size.x; }
-					var v = ((x - Start) * size.x / Span);
-					if(v > size.x){ v = size.x; }
-					return v | 0;
-				}
+					const LayerHeight = 10;
 
-				function TrackMarker(id, start, stop, totalHeight){
-					var x0 = tx(start);
-					var x1 = tx(stop);
+					for(var thi = 0; thi < track.threads.length; thi += 1){
+						ui.Y = BaseY;
+						var thread = track.threads[thi];
 
-					Y += 10;
-					ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,50%,1)";
-					ctx.font = "8px";
-					ctx.fillText(id, x0 + 2, Y);
-					Y += 2;
+						ui.block(
+							thread.ThreadID,
+							thread.start, thread.stop,
+							thread.layers.length*LayerHeight
+						);
 
-					ctx.fillStyle = "hsla(" + ((id * 34)%360) + ",50%,90%,1)";
-					ctx.fillRect(x0, Y, x1 - x0, totalHeight);
-
-				}
-
-				LargeHeader(p.MachineID + " > " + p.ProcessID, 18, 95);
-				p.tracks.map(function(track){
-					Y = Y + 4;
-
-					var MaxY = Y + 20,
-						baseY = Y;
-
-					track.threads.map(function(t){
-
-						function EventSpan(id, depth, start, stop, h){
-							ctx.fillStyle = "hsla(" + ((id * 11)%360) + ",40%," + (60 + (depth*20)|0) + "%,1)";
-
-							var x0 = tx(start);
-							var x1 = tx(stop);
-							ctx.fillRect(x0, Y, x1 - x0, h);
+						var layerlen = thread.layers.length;
+						for(var li = 0; li < layerlen; li += 1){
+							var layer = thread.layers[li];
+							ui.spans(layer.IDs, layer.timepairs, (layerlen-li-1)/layerlen, LayerHeight);
 						}
+						ui.pad(3);
 
-						TrackMarker(t.ThreadID, t.start, t.stop, t.layers.length*10 + 2);
-
-						var layerlen = t.layers.length;
-						t.layers.map(function(layer, layeri){
-							var pairs = layer.timepairs;
-							var ids   = layer.IDs;
-							for(var i = 0; i < pairs.length; i += 2){
-								EventSpan(
-									ids[i/2],
-									(layerlen-layeri-1)/layerlen,
-									pairs[i], pairs[i+1],
-									10);
-							}
-							Y += 10;
-						});
-
-						Y += 4;
-
-						MaxY = Math.max(MaxY, Y);
-						Y = baseY;
-					});
-
-					Y = MaxY;
-				});
-			});
+						MaximumY = Math.max(MaximumY, ui.Y);
+					}
+					ui.Y = MaximumY;
+				}
+			}
 		}
 	};
 
