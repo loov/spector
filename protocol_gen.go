@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"go/format"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
@@ -23,25 +24,33 @@ type Event struct {
 type Field struct {
 	Name  string
 	Value string
-	Type  Type
+	Kind  Kind
 }
 
-type Type string
+type Kind string
 
 const (
-	Int    = Type("Int")
-	Byte   = Type("Byte")
-	UTF8   = Type("UTF8")
-	Blob   = Type("Blob")
-	Values = Type("Values")
+	Int    = Kind("Int")
+	Byte   = Kind("Byte")
+	UTF8   = Kind("UTF8")
+	Blob   = Kind("Blob")
+	Values = Kind("Values")
 )
 
-var ZeroValue = map[Type]string{
-	Int:    "0",
-	Byte:   "0",
-	UTF8:   "''",
-	Blob:   "new Uint8Array()",
-	Values: "new Array()",
+func (k Kind) Type() string {
+	switch k {
+	case Int:
+		return "int32"
+	case Byte:
+		return "byte"
+	case UTF8:
+		return "string"
+	case Blob:
+		return "[]byte"
+	case Values:
+		return "[]Value"
+	}
+	return ""
 }
 
 var Events = []*Event{
@@ -66,7 +75,7 @@ var Events = []*Event{
 	{Name: "Finish", Spec: "Code:Byte=0x0A Time ThreadID StackID ID"},
 
 	// sample integer values
-	{Name: "Sample", Spec: "Code:Byte=0x0B Time ThreadID StackID Values:Values"},
+	// {Name: "Sample", Spec: "Code:Byte=0x0B Time ThreadID StackID Values:Values"},
 	// create a snapshot from an item
 	{Name: "Snapshot", Spec: "Code:Byte=0x0C Time ThreadID StackID ID ContentKind:Byte Content:Blob"},
 
@@ -95,6 +104,68 @@ var ContentKinds = []*ContentKind{
 	{Name: "User", Code: "0x20"},
 }
 
+var Code = template.Must(template.New("").Parse(`
+package trace
+
+type Event interface {
+	Code() byte
+	ReadFrom(r *Reader)
+	WriteTo(w *Writer)
+}
+
+func NewEventByCode(code byte) Event {
+	switch code {
+	{{ range $event := .Events }}
+	case {{$event.Code}}:
+		return &{{$event.Name}}{}
+	{{ end }}
+	}
+	panic("unknown code")
+}
+
+{{ range $event := .Events }}
+// code: {{$event.Code}}
+type {{$event.Name}} struct {
+	{{ range $field := $event.Fields }}
+	{{$field.Name}} {{$field.Kind.Type}}
+	{{ end }}
+}
+{{ end }}
+
+{{ range $event := .Events }}
+func (ev *{{$event.Name}}) Code() byte { return {{$event.Code}} }
+
+func (ev *{{$event.Name}}) ReadFrom(r *Reader) {
+	{{ range $field := $event.Fields }}
+	ev.{{$field.Name}} = r.enc.Read{{$field.Kind}}();
+	{{ end }}
+}
+
+func (ev *{{$event.Name}}) WriteTo(w *Writer) {
+	{{ range $field := $event.Fields }}
+	w.enc.Write{{$field.Kind}}(ev.{{$field.Name}});
+	{{ end }}
+}
+{{ end }}
+`))
+
+func main() {
+	var buf bytes.Buffer
+	check(Code.Execute(&buf, map[string]interface{}{
+		"Version":      Version,
+		"Events":       Events,
+		"ContentKinds": ContentKinds,
+	}))
+
+	bytes := buf.Bytes()
+	rx := regexp.MustCompile(`(?m)[ \t\n]+$`)
+	bytes = rx.ReplaceAll(bytes, []byte{})
+	bytes, err := format.Source(bytes)
+	check(err)
+
+	check(ioutil.WriteFile(filepath.Join("trace", "events.go"), bytes, 0777))
+}
+
 func check(err error) {
 	if err != nil {
 		panic(err)
@@ -116,7 +187,7 @@ func parseField(spec string) Field {
 	}
 
 	if s < e {
-		f.Type = Type(spec[s:e])
+		f.Kind = Kind(spec[s:e])
 	}
 
 	e = e + 1
@@ -132,8 +203,8 @@ func init() {
 		fields := strings.Fields(ev.Spec)
 		for _, field := range fields {
 			f := parseField(field)
-			if f.Type == "" {
-				f.Type = Int
+			if f.Kind == "" {
+				f.Kind = Int
 			}
 			ev.Fields = append(ev.Fields, f)
 		}
@@ -143,72 +214,4 @@ func init() {
 		ev.Code = ev.Fields[0].Value
 		ev.Fields = ev.Fields[1:]
 	}
-}
-
-var Funcs = template.FuncMap{
-	"zero": func(f Field) string {
-		if f.Value != "" {
-			return f.Value
-		}
-		return ZeroValue[f.Type]
-	},
-}
-
-var JS = template.Must(template.New("").Funcs(Funcs).Parse(`
-// GENERATED CODE
-// DO NOT MODIFY MANUALLY
-package("spector", function(){
-	var Event = {};
-	var EventByCode = {};
-	var EventCode = {};
-
-	{{ range $event := .Events }}
-	Event.{{$event.Name}} = {{$event.Name}}Event;
-	{{$event.Name}}Event.Code = {{$event.Code}};
-	EventCode.{{$event.Name}} = {{$event.Code}};
-	EventByCode[{{$event.Code}}] = {{$event.Name}}Event;
-	function {{$event.Name}}Event(props){
-		props = props !== undefined ? props : {};
-		{{ range $field := $event.Fields }}
-		this.{{$field.Name}} = props.{{$field.Name}} || {{ zero $field }};{{ end }}
-	};
-
-	{{$event.Name}}Event.prototype = {
-		Code: {{$event.Code}},
-		read: function(stream){ {{ range $field := $event.Fields }}
-			this.{{$field.Name}} = stream.read{{$field.Type}}();{{ end }}
-		},
-		write: function(stream){ {{ range $field := $event.Fields }}{{if $field.Value}}
-			stream.write{{$field.Type}}({{$field.Value}});{{else}}
-			stream.write{{$field.Type}}(this.{{$field.Name}});{{ end }}{{ end }}
-		}
-	};
-	{{ end }}
-
-	var ContentKind = { {{ range $kind := .ContentKinds }}
-		{{$kind.Name}}: {{$kind.Code}},{{ end }}
-	};
-
-	return {
-		Version: {{ .Version }},
-		Event: Event,
-		EventCode: EventCode,
-		EventByCode: EventByCode,
-		ContentKind: ContentKind
-	};
-});
-`))
-
-func main() {
-	var buf bytes.Buffer
-	check(JS.Execute(&buf, map[string]interface{}{
-		"Version":      Version,
-		"Events":       Events,
-		"ContentKinds": ContentKinds,
-	}))
-
-	bytes := buf.Bytes()
-	rx := regexp.MustCompile(`(?m)[ \t]+$`)
-	bytes = rx.ReplaceAll(bytes, []byte{})
-	check(ioutil.WriteFile(filepath.Join("spector", "protocol.js"), bytes, 0777))
 }
