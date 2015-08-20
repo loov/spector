@@ -1,7 +1,7 @@
-<link rel="import" href="/spector/util/utf8.html">
-<link rel="import" href="/spector/protocol.html">
-<script>
 package("spector", function(){
+	depends("/spector/util/utf8.js");
+	depends("/spector/protocol.js");
+
 	var Magic = "spector";
 
 	var Stage = {
@@ -145,4 +145,3 @@ package("spector", function(){
 		Stream: Stream
 	};
 });
-</script>

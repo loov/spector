@@ -1,10 +1,9 @@
-<link rel="import" href="/spector/protocol.html">
-<link rel="import" href="/spector/stream.html">
-<link rel="import" href="/spector/trace.html">
-
-<script>
 package("spector.Trace", function(){
 	"use strict";
+
+	depends("/spector/stream.js");
+	depends("/spector/protocol.js");
+	depends("/spector/trace.js");
 
 	function UI(context, size, trace){
 		this.context = context;
@@ -145,4 +144,3 @@ package("spector.Trace", function(){
 		View: View
 	};
 });
-</script>

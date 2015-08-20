@@ -155,9 +155,8 @@ var Funcs = template.FuncMap{
 }
 
 var JS = template.Must(template.New("").Funcs(Funcs).Parse(`
-<!-- GENERATED CODE -->
-<!-- DO NOT MODIFY MANUALLY -->
-<script>
+// GENERATED CODE
+// DO NOT MODIFY MANUALLY
 package("spector", function(){
 	var Event = {};
 	var EventByCode = {};
@@ -197,8 +196,7 @@ package("spector", function(){
 		EventByCode: EventByCode,
 		ContentKind: ContentKind
 	};
-})
-</script>
+});
 `))
 
 func main() {
@@ -212,5 +210,5 @@ func main() {
 	bytes := buf.Bytes()
 	rx := regexp.MustCompile(`(?m)[ \t]+$`)
 	bytes = rx.ReplaceAll(bytes, []byte{})
-	check(ioutil.WriteFile(filepath.Join("spector", "protocol.html"), bytes, 0777))
+	check(ioutil.WriteFile(filepath.Join("spector", "protocol.js"), bytes, 0777))
 }

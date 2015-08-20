@@ -1,7 +1,7 @@
-<link rel="import" href="/spector/stream.html">
-<link rel="import" href="/spector/protocol.html">
-<script>
 package("spector.import.simulator", function(){
+	depends("/spector/stream.js");
+	depends("/spector/protocol.js");
+
 	function R(probability){ return Math.random() < probability; }
 
 	function len(obj){

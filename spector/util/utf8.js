@@ -1,4 +1,3 @@
-<script>
 package("spector.util.utf8", function() {
 	var chr = String.fromCharCode;
 	function decode(data) {
@@ -61,4 +60,3 @@ package("spector.util.utf8", function() {
 		encode: encode
 	}
 });
-</script>

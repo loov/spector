@@ -1,7 +1,5 @@
-
-<!-- GENERATED CODE -->
-<!-- DO NOT MODIFY MANUALLY -->
-<script>
+// GENERATED CODE
+// DO NOT MODIFY MANUALLY
 package("spector", function(){
 	var Event = {};
 	var EventByCode = {};
@@ -406,5 +404,4 @@ package("spector", function(){
 		EventByCode: EventByCode,
 		ContentKind: ContentKind
 	};
-})
-</script>
+});

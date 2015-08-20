@@ -1,7 +1,7 @@
-<link rel="import" href="/spector/protocol.html">
-<link rel="import" href="/spector/stream.html">
-<script>
 package("spector", function(){
+	depends("/spector/stream.js");
+	depends("/spector/protocol.js");
+
 	"use strict";
 	// Trace is the ViewModel for main display
 	var ValueArray = Array;
@@ -284,4 +284,3 @@ package("spector", function(){
 		Trace: Trace
 	};
 });
-</script>

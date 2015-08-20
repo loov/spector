@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <head>
 	<meta charset="utf-8">
-	<title>Spector</title>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>Spector</title>
 
 	<script src="/assets/js/dom.js"></script>
 	<script src="/assets/js/es5.js"></script>
-	<script src="/assets/js/HTMLImports.js"></script>
 	<script src="/assets/js/package.js"></script>
 
 	<link href='http://fonts.googleapis.com/css?family=Roboto:300,400,500,700' rel='stylesheet' type='text/css' async>
@@ -18,40 +19,6 @@
 </head>
 <body>
 	<canvas id="view"></canvas>
-
-	<style>
-		* { box-sizing: border-box; }
-		#view {
-			position: fixed;
-			top: 0; left: 0;
-			border: 1px solid #000;
-		}
-	</style>
-
-	<link rel="import" href="/spector/import/simulator.html">
-	<link rel="import" href="/spector/import/tracing.html">
-	<link rel="import" href="/spector/trace.html">
-	<link rel="import" href="/spector/trace.view.html">
-
-	<script>
-		var stream = new spector.import.simulator.Stream();
-		var trace = new spector.Trace();
-		var traceview = new spector.Trace.View();
-
-		var canvas = document.getElementById("view");
-		var context = canvas.getContext("2d");
-
-		function render(){
-			canvas.width = window.innerWidth - 4;
-			canvas.height = window.innerHeight - 4;
-			var size = {x: canvas.width, y: canvas.height};
-			context.clearRect(0, 0, size.x, size.y);
-
-			trace.consume(stream);
-			traceview.render(context, trace, size);
-			requestAnimationFrame(render);
-		}
-
-		render();
-	</script>
+	<link href="/spector/~pkg.css" rel="stylesheet" >
+	<script src="/spector/~pkg.js"></script>
 </body>
