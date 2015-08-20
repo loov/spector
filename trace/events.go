@@ -4,8 +4,8 @@ package trace
 
 type Event interface {
 	Code() byte
-	DecodeFrom(dec *Decoder)
-	EncodeTo(enc *Encoder)
+	Decode(dec *Decoder)
+	Encode(enc *Encoder)
 }
 
 // Primitive types
