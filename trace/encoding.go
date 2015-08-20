@@ -1,70 +1,56 @@
 package trace
 
-type Reader struct {
+type Decoder struct {
 	Head int
 	Data []byte
 }
 
-type Writer struct{ Data []byte }
+type Encoder struct{ Data []byte }
 
-func NewWriter() *Writer { return &Writer{} }
+func NewEncoder() *Encoder { return &Encoder{} }
+func NewDecoder() *Decoder { return &Decoder{} }
 
-func NewReader() *Reader { return &Reader{} }
+func (dec *Decoder) Append(data []byte) { dec.Data = append(dec.Data, data...) }
 
-func (r *Reader) Append(data []byte) { r.Data = append(r.Data, data...) }
+func (dec *Decoder) readID() ID   { return ID(dec.readInt()) }
+func (enc *Encoder) writeID(v ID) { enc.writeInt(int32(v)) }
 
-func (r *Reader) readID() ID   { return ID(r.readInt()) }
-func (w *Writer) writeID(v ID) { w.writeInt(int32(v)) }
+func (dec *Decoder) readTime() Time   { return Time(dec.readInt()) }
+func (enc *Encoder) writeTime(v Time) { enc.writeInt(int32(v)) }
 
-func (r *Reader) readTime() Time   { return Time(r.readInt()) }
-func (w *Writer) writeTime(v Time) { w.writeInt(int32(v)) }
+func (dec *Decoder) readFreq() Freq   { return Freq(dec.readInt()) }
+func (enc *Encoder) writeFreq(v Freq) { enc.writeInt(int32(v)) }
 
-func (r *Reader) readFreq() Freq   { return Freq(r.readInt()) }
-func (w *Writer) writeFreq(v Freq) { w.writeInt(int32(v)) }
+func (dec *Decoder) readKind() Kind   { return Kind(dec.readByte()) }
+func (enc *Encoder) writeKind(v Kind) { enc.writeByte(byte(v)) }
 
-func (r *Reader) readKind() Kind   { return Kind(r.readByte()) }
-func (w *Writer) writeKind(v Kind) { w.writeByte(byte(v)) }
-
-func (w *Writer) writeByte(v byte) { w.Data = append(w.Data, v) }
-func (r *Reader) readByte() byte {
-	v := r.Data[r.Head]
-	r.Head++
+func (enc *Encoder) writeByte(v byte) { enc.Data = append(enc.Data, v) }
+func (dec *Decoder) readByte() byte {
+	v := dec.Data[dec.Head]
+	dec.Head++
 	return v
 }
 
-func (w *Writer) writeInt(v int32) {
-	w.Data = append(w.Data,
-		byte(v>>24),
-		byte(v>>16),
-		byte(v>>8),
-		byte(v>>0),
-	)
+func (enc *Encoder) writeInt(v int32) {
+	enc.Data = append(enc.Data, byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
 }
-func (r *Reader) readInt() int32 {
-	v := int32(r.Data[r.Head+0])<<24 |
-		int32(r.Data[r.Head+1])<<16 |
-		int32(r.Data[r.Head+2])<<8 |
-		int32(r.Data[r.Head+3])<<0
-	r.Head += 4
+func (dec *Decoder) readInt() int32 {
+	d, h := dec.Data, dec.Head
+	v := int32(d[h])<<24 | int32(d[h+1])<<16 | int32(d[h+2])<<8 | int32(d[h+3])
+	dec.Head += 4
 	return v
 }
 
-func (w *Writer) writeBytes(v []byte) {
-	w.WriteInt(v)
-	w.Data = append(w.Data, v...)
+func (enc *Encoder) writeBytes(v []byte) {
+	enc.writeInt(int32(len(v)))
+	enc.Data = append(enc.Data, v...)
 }
-
-func (r *Reader) readBytes() []byte {
-	sz := r.ReadInt()
-	v := r.Data[r.Head : r.Head+sz]
-	r.Head += sz
+func (dec *Decoder) readBytes() []byte {
+	sz := int(dec.readInt())
+	v := dec.Data[dec.Head : dec.Head+sz]
+	dec.Head += sz
 	return v
 }
 
-func (w *Writer) writeString(v string) {
-	w.WriteBlob([]byte(v))
-}
-
-func (r *Reader) readString() string {
-	return string(r.ReadBlob())
-}
+func (enc *Encoder) writeString(v string) { enc.writeBytes([]byte(v)) }
+func (dec *Decoder) readString() string   { return string(dec.readBytes()) }

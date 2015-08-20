@@ -1,11 +1,11 @@
 package trace
 
-//go:generate go run events_gen.go -- events.go
+//go:generate go run events_encoding_gen.go
 
 type Event interface {
 	Code() byte
-	ReadFrom(r *Reader)
-	WriteTo(w *Writer)
+	DecodeFrom(dec *Decoder)
+	EncodeTo(enc *Encoder)
 }
 
 // Primitive types
