@@ -19,9 +19,9 @@ func NewEventByCode(code byte) Event {
 	case 0x06:
 		return &ThreadStop{}
 	case 0x07:
-		return &Begin{}
+		return &SpanBegin{}
 	case 0x08:
-		return &End{}
+		return &SpanEnd{}
 	case 0x09:
 		return &Start{}
 	case 0x0A:
@@ -102,27 +102,27 @@ func (ev *ThreadStop) Encode(enc *Encoder) {
 	enc.writeID(ev.ThreadID)
 	enc.writeID(ev.StackID)
 }
-func (ev *Begin) Code() byte { return 0x07 }
-func (ev *Begin) Decode(dec *Decoder) {
+func (ev *SpanBegin) Code() byte { return 0x07 }
+func (ev *SpanBegin) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
 	ev.ThreadID = dec.readID()
 	ev.StackID = dec.readID()
 	ev.ID = dec.readID()
 }
-func (ev *Begin) Encode(enc *Encoder) {
+func (ev *SpanBegin) Encode(enc *Encoder) {
 	enc.writeTime(ev.Time)
 	enc.writeID(ev.ThreadID)
 	enc.writeID(ev.StackID)
 	enc.writeID(ev.ID)
 }
-func (ev *End) Code() byte { return 0x08 }
-func (ev *End) Decode(dec *Decoder) {
+func (ev *SpanEnd) Code() byte { return 0x08 }
+func (ev *SpanEnd) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
 	ev.ThreadID = dec.readID()
 	ev.StackID = dec.readID()
 	ev.ID = dec.readID()
 }
-func (ev *End) Encode(enc *Encoder) {
+func (ev *SpanEnd) Encode(enc *Encoder) {
 	enc.writeTime(ev.Time)
 	enc.writeID(ev.ThreadID)
 	enc.writeID(ev.StackID)

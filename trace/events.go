@@ -17,6 +17,15 @@ type (
 )
 
 const (
+	InvalidID = ID(0)
+
+	MinTime = -Time(1 << 31)
+	MaxTime = Time(1 << 31)
+)
+
+func (t Time) Unassigned() bool { return (t == MaxTime) || (t == MinTime) }
+
+const (
 	KindInvalid = Kind(0x00)
 	KindThread  = Kind(0x01)
 	KindStack   = Kind(0x02)
@@ -77,7 +86,7 @@ type (
 	}
 
 	// event: 0x07
-	Begin struct {
+	SpanBegin struct {
 		Time     Time
 		ThreadID ID
 		StackID  ID
@@ -85,7 +94,7 @@ type (
 	}
 
 	// event: 0x08
-	End struct {
+	SpanEnd struct {
 		Time     Time
 		ThreadID ID
 		StackID  ID
