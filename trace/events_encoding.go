@@ -33,11 +33,17 @@ func NewEventByCode(code byte) Event {
 	}
 	panic("unknown code")
 }
+
+// Invalid 0x00
 func (ev *Invalid) Code() byte { return 0x00 }
 func (ev *Invalid) Decode(dec *Decoder) {
+
 }
 func (ev *Invalid) Encode(enc *Encoder) {
+
 }
+
+// StreamStart 0x01
 func (ev *StreamStart) Code() byte { return 0x01 }
 func (ev *StreamStart) Decode(dec *Decoder) {
 	ev.ProcessID = dec.readID()
@@ -51,6 +57,8 @@ func (ev *StreamStart) Encode(enc *Encoder) {
 	enc.writeTime(ev.Time)
 	enc.writeFreq(ev.Freq)
 }
+
+// StreamStop 0x02
 func (ev *StreamStop) Code() byte { return 0x02 }
 func (ev *StreamStop) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -58,6 +66,8 @@ func (ev *StreamStop) Decode(dec *Decoder) {
 func (ev *StreamStop) Encode(enc *Encoder) {
 	enc.writeTime(ev.Time)
 }
+
+// ThreadStart 0x03
 func (ev *ThreadStart) Code() byte { return 0x03 }
 func (ev *ThreadStart) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -69,6 +79,8 @@ func (ev *ThreadStart) Encode(enc *Encoder) {
 	enc.writeID(ev.ThreadID)
 	enc.writeID(ev.StackID)
 }
+
+// ThreadSleep 0x04
 func (ev *ThreadSleep) Code() byte { return 0x04 }
 func (ev *ThreadSleep) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -80,6 +92,8 @@ func (ev *ThreadSleep) Encode(enc *Encoder) {
 	enc.writeID(ev.ThreadID)
 	enc.writeID(ev.StackID)
 }
+
+// ThreadWake 0x05
 func (ev *ThreadWake) Code() byte { return 0x05 }
 func (ev *ThreadWake) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -91,6 +105,8 @@ func (ev *ThreadWake) Encode(enc *Encoder) {
 	enc.writeID(ev.ThreadID)
 	enc.writeID(ev.StackID)
 }
+
+// ThreadStop 0x06
 func (ev *ThreadStop) Code() byte { return 0x06 }
 func (ev *ThreadStop) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -102,6 +118,8 @@ func (ev *ThreadStop) Encode(enc *Encoder) {
 	enc.writeID(ev.ThreadID)
 	enc.writeID(ev.StackID)
 }
+
+// SpanBegin 0x07
 func (ev *SpanBegin) Code() byte { return 0x07 }
 func (ev *SpanBegin) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -115,6 +133,8 @@ func (ev *SpanBegin) Encode(enc *Encoder) {
 	enc.writeID(ev.StackID)
 	enc.writeID(ev.ID)
 }
+
+// SpanEnd 0x08
 func (ev *SpanEnd) Code() byte { return 0x08 }
 func (ev *SpanEnd) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -128,6 +148,8 @@ func (ev *SpanEnd) Encode(enc *Encoder) {
 	enc.writeID(ev.StackID)
 	enc.writeID(ev.ID)
 }
+
+// Start 0x09
 func (ev *Start) Code() byte { return 0x09 }
 func (ev *Start) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -141,6 +163,8 @@ func (ev *Start) Encode(enc *Encoder) {
 	enc.writeID(ev.StackID)
 	enc.writeID(ev.ID)
 }
+
+// Finish 0x0A
 func (ev *Finish) Code() byte { return 0x0A }
 func (ev *Finish) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -154,6 +178,8 @@ func (ev *Finish) Encode(enc *Encoder) {
 	enc.writeID(ev.StackID)
 	enc.writeID(ev.ID)
 }
+
+// Snapshot 0x0C
 func (ev *Snapshot) Code() byte { return 0x0C }
 func (ev *Snapshot) Decode(dec *Decoder) {
 	ev.Time = dec.readTime()
@@ -171,6 +197,8 @@ func (ev *Snapshot) Encode(enc *Encoder) {
 	enc.writeKind(ev.Kind)
 	enc.writeBytes(ev.Content)
 }
+
+// Info 0x0D
 func (ev *Info) Code() byte { return 0x0D }
 func (ev *Info) Decode(dec *Decoder) {
 	ev.ID = dec.readID()

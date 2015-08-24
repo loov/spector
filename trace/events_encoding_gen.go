@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"regexp"
 	"sort"
 	"strings"
 	"text/template"
@@ -83,27 +82,19 @@ package trace
 
 func NewEventByCode(code byte) Event {
 	switch code {
-	{{ range $event := .Events }}
-	case {{$event.Code}}:
-		return &{{$event.Name}}{}
-	{{ end }}
+	{{ range $event := .Events }}case {{$event.Code}}: return &{{$event.Name}}{}; {{ end }}
 	}
 	panic("unknown code")
 }
 
 {{ range $event := .Events }}
+// {{$event.Name}} {{$event.Code}}
 func (ev *{{$event.Name}}) Code() byte { return {{$event.Code}} }
-
 func (ev *{{$event.Name}}) Decode(dec *Decoder) {
-	{{ range $field := $event.Fields }}
-	ev.{{$field.Name}} = dec.read{{$field.Kind}}();
-	{{ end }}
+	{{ range $field := $event.Fields }} ev.{{$field.Name}} = dec.read{{$field.Kind}}(); {{ end }}
 }
-
 func (ev *{{$event.Name}}) Encode(enc *Encoder) {
-	{{ range $field := $event.Fields }}
-	enc.write{{$field.Kind}}(ev.{{$field.Name}});
-	{{ end }}
+	{{ range $field := $event.Fields }} enc.write{{$field.Kind}}(ev.{{$field.Name}}); {{ end }}
 }
 {{ end }}
 `))
@@ -148,8 +139,6 @@ func main() {
 	}))
 
 	bytes := buf.Bytes()
-	rx := regexp.MustCompile(`(?m)[ \t\n]+$`)
-	bytes = rx.ReplaceAll(bytes, []byte{})
 	fmted, err := format.Source(bytes)
 	check(err)
 
