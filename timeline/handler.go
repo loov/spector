@@ -4,18 +4,18 @@ import (
 	"github.com/egonelbre/spector/trace"
 )
 
-type StreamHandler struct {
+type Handler struct {
 	Timeline *Timeline
 	Proc     *Proc
 }
 
-func (sh *StreamHandler) Handle(ev trace.Event) {
-	timeline, proc := sh.Timeline, sh.Proc
+func (h *Handler) Handle(ev trace.Event) {
+	timeline, proc := h.Timeline, h.Proc
 	timeline.TotalEvents++
 
 	switch ev := ev.(type) {
 	case *trace.StreamStart:
-		sh.Proc = &Proc{
+		h.Proc = &Proc{
 			PID:   ev.ProcessID,
 			MID:   ev.MachineID,
 			Time:  ev.Time,
@@ -23,7 +23,7 @@ func (sh *StreamHandler) Handle(ev trace.Event) {
 			Start: ev.Time,
 			Stop:  trace.MaxTime,
 		}
-		timeline.Procs = append(timeline.Procs, sh.Proc)
+		timeline.Procs = append(timeline.Procs, h.Proc)
 	case *trace.StreamStop:
 		assert(proc != nil)
 

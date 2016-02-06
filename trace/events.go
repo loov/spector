@@ -8,6 +8,14 @@ type Event interface {
 	Encode(enc *Encoder)
 }
 
+type Handler interface {
+	Handle(Event)
+}
+
+type Reader interface {
+	Next() []Event
+}
+
 // Primitive types
 type (
 	ID   int32
@@ -19,8 +27,8 @@ type (
 const (
 	InvalidID = ID(0)
 
-	MinTime = -Time(1 << 31)
-	MaxTime = Time(1 << 31)
+	MinTime = Time(-1 << 31)
+	MaxTime = Time(1<<31 - 1)
 )
 
 func (t Time) Unassigned() bool { return (t == MaxTime) || (t == MinTime) }

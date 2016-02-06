@@ -2,44 +2,22 @@ package main
 
 import (
 	"flag"
-	"html/template"
-	"log"
-	"net"
-	"net/http"
-	"os"
+	"time"
 
-	"github.com/raintreeinc/livepkg"
-)
-
-var (
-	addr = flag.String("listen", ":8000", "address to listen on")
-	dev  = flag.Bool("dev", true, "development mode")
+	"github.com/egonelbre/spector/trace"
+	"github.com/egonelbre/spector/trace/simulator"
 )
 
 func main() {
 	flag.Parse()
 
-	if os.Getenv("HOST") != "" || os.Getenv("PORT") != "" {
-		*addr = net.JoinHostPort(os.Getenv("HOST"), os.Getenv("PORT"))
-	}
+	stream := simulator.NewStream()
+	stream.Start()
 
-	dir := http.Dir(".")
-	pkg := livepkg.NewServer(dir, *dev, "/spector/main.js", "/spector/main.css")
-	http.Handle("/spector/", pkg)
-
-	assets := http.Dir("assets")
-	http.Handle("/assets/", http.StripPrefix("/assets", http.FileServer(assets)))
-
-	http.HandleFunc("/", index)
-
-	log.Println("starting listening on ", *addr)
-	http.ListenAndServe(*addr, nil)
-}
-
-func index(w http.ResponseWriter, r *http.Request) {
-	T := template.Must(template.New("").ParseFiles("index.html"))
-	err := T.ExecuteTemplate(w, "index.html", nil)
-	if err != nil {
-		log.Println(err)
-	}
+	driver := trace.NewDriver(
+		stream,
+		simulator.NewPrinter(),
+		time.Second,
+	)
+	driver.Run()
 }
