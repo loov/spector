@@ -9,6 +9,13 @@ type Handler struct {
 	Proc     *Proc
 }
 
+func NewHandler() *Handler {
+	return &Handler{
+		Timeline: &Timeline{},
+		Proc:     &Proc{},
+	}
+}
+
 func (h *Handler) Handle(ev trace.Event) {
 	timeline, proc := h.Timeline, h.Proc
 	timeline.TotalEvents++
