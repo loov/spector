@@ -7,11 +7,15 @@ import (
 	"github.com/egonelbre/spector/timeline"
 	"github.com/egonelbre/spector/trace"
 	"github.com/egonelbre/spector/trace/simulator"
+
+	"github.com/egonelbre/spector/ui/font"
 )
 
 type State struct {
 	Timeline timeline.Timeline
 	Handler  timeline.Handler
+
+	Atlas *font.Atlas
 
 	Simulator *simulator.Stream
 	Dirty     bool
@@ -21,6 +25,13 @@ func NewState() *State {
 	state := &State{}
 	state.Handler.Timeline = &state.Timeline
 	state.Simulator = simulator.NewStream()
+
+	var err error
+	state.Atlas, err = font.NewAtlas("~DejaVuSans.ttf", 72, 12)
+	if err != nil {
+		panic(err)
+	}
+
 	state.Simulator.Start()
 	state.Dirty = true
 
@@ -57,6 +68,8 @@ func (state *State) Render(window *glfw.Window) {
 
 	view := NewView(V2{float32(width), float32(height)}, &state.Timeline)
 	view.Render()
+
+	state.Atlas.Draw(100, 100, "hello world")
 }
 
 type V2 struct{ X, Y float32 }
