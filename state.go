@@ -27,7 +27,7 @@ func NewState() *State {
 	state.Simulator = simulator.NewStream()
 
 	var err error
-	state.Atlas, err = font.NewAtlas("~DejaVuSans.ttf", 72, 12)
+	state.Atlas, err = font.NewAtlas("~DejaVuSans.ttf", 72, 14)
 	if err != nil {
 		panic(err)
 	}
@@ -61,20 +61,21 @@ func (state *State) Render(window *glfw.Window) {
 	gl.LoadIdentity()
 
 	gl.Disable(gl.DEPTH)
+	gl.Enable(gl.FRAMEBUFFER_SRGB)
 
 	width, height := window.GetSize()
 	gl.Viewport(0, 0, int32(width), int32(height))
 	gl.Ortho(0, float64(width), float64(height), 0, 30, -30)
 
 	view := NewView(V2{float32(width), float32(height)}, &state.Timeline)
+	view.Atlas = state.Atlas
 	view.Render()
-
-	state.Atlas.Draw(100, 100, "hello world")
 }
 
 type V2 struct{ X, Y float32 }
 
 type View struct {
+	Atlas    *font.Atlas
 	Timeline *timeline.Timeline
 
 	Size V2
@@ -124,10 +125,10 @@ func (ui *View) Render() {
 	const LayerHeight = 10
 	const LayerPadding = 3
 
-	ui.H(fontViewSummary, "total event count")
+	ui.H(fontViewSummary, "%d", ui.Timeline.TotalEvents)
 
 	for _, proc := range ui.Timeline.Procs {
-		ui.H(fontProcHeader, "%d > %d", proc.MID, proc.PID)
+		ui.H(fontProcHeader, "M:%08X P:%08X", proc.MID, proc.PID)
 
 		for _, track := range proc.Tracks {
 			ui.Pad(TrackPadding)
@@ -237,6 +238,9 @@ func (ui *View) H(font *Font, format string, args ...interface{}) {
 	gl.Color4ub(RGBA(font.Background))
 	ui.Rect(V2{0, ui.Y}, V2{ui.Size.X, font.Height})
 	ui.Y += font.Height
+
+	gl.Color4ub(RGBA(font.Foreground))
+	ui.Atlas.Drawf(10, ui.Y-4, format, args...)
 }
 
 func (ui *View) Pad(height float32) {

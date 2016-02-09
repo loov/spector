@@ -67,7 +67,7 @@ func NewAtlas(filename string, dpi, fontSize float64) (*Atlas, error) {
 	}
 
 	atlas.Image = image.NewRGBA(image.Rect(0, 0, 1024, 1024))
-	//draw.Draw(atlas.Image, atlas.Image.Bounds(), image.White, image.ZP, draw.Src)
+	// draw.Draw(atlas.Image, atlas.Image.Bounds(), image.Black, image.ZP, draw.Src)
 
 	atlas.Context = freetype.NewContext()
 	atlas.Context.SetDPI(dpi)
@@ -77,7 +77,7 @@ func NewAtlas(filename string, dpi, fontSize float64) (*Atlas, error) {
 	atlas.Context.SetHinting(font.HintingNone)
 
 	atlas.Context.SetClip(atlas.Image.Bounds())
-	atlas.Context.SetSrc(image.Black)
+	atlas.Context.SetSrc(image.White)
 	atlas.Context.SetDst(atlas.Image)
 
 	opts := &truetype.Options{}
@@ -201,12 +201,13 @@ func (atlas *Atlas) Draw(x, y float32, text string) {
 
 	gl.Enable(gl.BLEND)
 	defer gl.Disable(gl.BLEND)
-	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	gl.BlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
 
 	gl.Enable(gl.TEXTURE_2D)
 	defer gl.Disable(gl.TEXTURE_2D)
 	gl.BindTexture(gl.TEXTURE_2D, atlas.Texture)
 
+	p := rune(0)
 	for _, r := range text {
 		glyph := atlas.Rendered[r]
 
@@ -225,7 +226,9 @@ func (atlas *Atlas) Draw(x, y float32, text string) {
 		}
 		gl.End()
 
-		x += ceilPxf(glyph.Advance)
+		k := atlas.Face.Kern(p, r)
+		p = r
+		x += float32(ceilPx(glyph.Advance + k))
 	}
 }
 
