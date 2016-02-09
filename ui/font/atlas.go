@@ -98,6 +98,8 @@ func ceilPxf(i fixed.Int26_6) float32 {
 	return float32(i) / div
 }
 
+const glyphPadding = 1
+
 func (atlas *Atlas) loadGlyph(r rune) {
 	if _, ok := atlas.Rendered[r]; ok {
 		return
@@ -111,8 +113,8 @@ func (atlas *Atlas) loadGlyph(r rune) {
 	glyph.Bounds = bounds
 	glyph.Advance = advance
 
-	width := ceilPx(bounds.Max.X - bounds.Min.X)
-	height := ceilPx(bounds.Max.Y - bounds.Min.Y)
+	width := ceilPx(bounds.Max.X-bounds.Min.X) + glyphPadding*2
+	height := ceilPx(bounds.Max.Y-bounds.Min.Y) + glyphPadding*2
 
 	if atlas.CursorX+atlas.Padding+width+atlas.Padding > atlas.Image.Bounds().Dx() {
 		atlas.CursorX = 0
@@ -125,7 +127,8 @@ func (atlas *Atlas) loadGlyph(r rune) {
 	glyph.Loc = image.Rect(x, y, x+width, y+height)
 	glyph.RelLoc = RelativeRect(glyph.Loc, atlas.Image.Bounds())
 
-	pt := fixed.P(x, y).Sub(bounds.Min)
+	pt := fixed.P(x+glyphPadding, y+glyphPadding).Sub(bounds.Min)
+	// drawRect(atlas.Image, glyph.Loc, color.RGBA{0xFF, 0x00, 0x00, 0xFF})
 	atlas.Context.DrawString(string(r), pt)
 
 	if height > atlas.MaxGlyphHeight {
@@ -212,7 +215,7 @@ func (atlas *Atlas) Draw(x, y float32, text string) {
 		glyph := atlas.Rendered[r]
 
 		dx, dy := float32(glyph.Loc.Dx()), float32(glyph.Loc.Dy())
-		px, py := x+ceilPxf(glyph.Bounds.Min.X), y+ceilPxf(glyph.Bounds.Min.Y)
+		px, py := x+ceilPxf(glyph.Bounds.Min.X)-glyphPadding, y+ceilPxf(glyph.Bounds.Min.Y)-glyphPadding
 		gl.Begin(gl.QUADS)
 		{
 			gl.TexCoord2f(glyph.RelLoc.Min.X, glyph.RelLoc.Min.Y)
@@ -250,18 +253,5 @@ func drawRect(rgba *image.RGBA, bounds image.Rectangle, color color.RGBA) {
 func drawVertLine(rgba *image.RGBA, x int, bounds image.Rectangle, color color.RGBA) {
 	for y := bounds.Min.Y; y <= bounds.Max.Y; y++ {
 		rgba.SetRGBA(x, y, color)
-	}
-}
-
-func (atlas *Atlas) DrawDebug() {
-	red := color.RGBA{0xFF, 0x00, 0x00, 0xFF}
-	green := color.RGBA{0x00, 0xFF, 0x00, 0xFF}
-	for _, glyph := range atlas.Rendered {
-		drawRect(atlas.Image, glyph.Loc, red)
-		drawVertLine(
-			atlas.Image,
-			glyph.Loc.Min.X-ceilPx(glyph.Bounds.Min.X)+ceilPx(glyph.Advance),
-			glyph.Loc,
-			green)
 	}
 }

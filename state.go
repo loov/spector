@@ -27,7 +27,7 @@ func NewState() *State {
 	state.Simulator = simulator.NewStream()
 
 	var err error
-	state.Atlas, err = font.NewAtlas("~DejaVuSans.ttf", 72, 14)
+	state.Atlas, err = font.NewAtlas("~DejaVuSans.ttf", 72, 12)
 	if err != nil {
 		panic(err)
 	}
