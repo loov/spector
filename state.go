@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/egonelbre/spector/trace"
 	"github.com/egonelbre/spector/trace/simulator"
 
+	"github.com/egonelbre/spector/ui"
 	"github.com/egonelbre/spector/ui/font"
 )
 
@@ -16,6 +19,8 @@ type State struct {
 	Handler  timeline.Handler
 
 	Atlas *font.Atlas
+
+	UI *ui.State
 
 	Simulator *simulator.Stream
 	Dirty     bool
@@ -34,6 +39,7 @@ func NewState() *State {
 
 	state.Simulator.Start()
 	state.Dirty = true
+	state.UI = &ui.State{}
 
 	return state
 }
@@ -70,6 +76,25 @@ func (state *State) Render(window *glfw.Window) {
 	view := NewView(V2{float32(width), float32(height)}, &state.Timeline)
 	view.Atlas = state.Atlas
 	view.Render()
+
+	x, y := window.GetCursorPos()
+	down := window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
+
+	root := state.UI
+
+	root.Input.Mouse.Position = ui.Point{float32(x), float32(y)}
+	root.Input.Mouse.PDown = root.Input.Mouse.Down
+	root.Input.Mouse.Down = down
+
+	if root.Button("alpha", ui.Rect(10, 10, 100, 30)) {
+		log.Println("alpha pressed")
+	}
+	if root.Button("beta", ui.Rect(10, 50, 100, 30)) {
+		log.Println("beta pressed")
+	}
+	if root.Button("gamma", ui.Rect(10, 90, 100, 30)) {
+		log.Println("gamma pressed")
+	}
 }
 
 type V2 struct{ X, Y float32 }
