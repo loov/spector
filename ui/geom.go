@@ -1,14 +1,11 @@
 package ui
 
 type Point struct{ X, Y float32 }
-
-func (p Point) Offset(by Point) Point {
-	return Point{p.X + by.X, p.Y + by.Y}
-}
-
 type Bounds struct{ Min, Max Point }
 
-func Rect(x, y, w, h float32) Bounds {
+func Pt(x, y float32) Point { return Point{x, y} }
+
+func Block(x, y, w, h float32) Bounds {
 	if w < 0 {
 		x, w = x+w, -w
 	}
@@ -19,6 +16,10 @@ func Rect(x, y, w, h float32) Bounds {
 		Min: Point{x, y},
 		Max: Point{x + w, y + h},
 	}
+}
+
+func (p Point) Offset(by Point) Point {
+	return Point{p.X + by.X, p.Y + by.Y}
 }
 
 func (b Bounds) Dx() float32 { return b.Max.X - b.Min.X }

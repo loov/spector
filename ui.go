@@ -10,21 +10,15 @@ import (
 )
 
 type State struct {
-	Atlas *ui.FontAtlas
-	UI    *ui.State
+	Backend ui.Backend
+	Input   *ui.Input
 }
 
 func NewState() *State {
 	state := &State{}
 
-	var err error
-	state.Atlas, err = ui.NewFontAtlas("~DejaVuSans.ttf", 72, 12)
-	if err != nil {
-		panic(err)
-	}
-
-	state.UI = &ui.State{}
-	state.UI.Font = state.Atlas
+	state.Backend = ui.NewGLBackend()
+	state.Input = &ui.Input{}
 
 	return state
 }
@@ -35,7 +29,7 @@ func (state *State) Stop() {
 func (state *State) Update(dt float32) {
 }
 
-func (state *State) Render(window *glfw.Window) {
+func (state *State) Reset(window *glfw.Window) {
 	gl.ClearColor(1, 1, 1, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 	gl.MatrixMode(gl.MODELVIEW)
@@ -47,29 +41,61 @@ func (state *State) Render(window *glfw.Window) {
 	width, height := window.GetSize()
 	gl.Viewport(0, 0, int32(width), int32(height))
 	gl.Ortho(0, float64(width), float64(height), 0, 30, -30)
+}
 
+func (state *State) UpdateInput(window *glfw.Window) {
 	x, y := window.GetCursorPos()
 	down := window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
 
-	root := state.UI
+	state.Input.Mouse.Position.X = float32(x)
+	state.Input.Mouse.Position.Y = float32(y)
+	state.Input.Mouse.WasDown = state.Input.Mouse.Down
+	state.Input.Mouse.Down = down
+}
 
-	root.Input.Mouse.Position = ui.Point{float32(x), float32(y)}
-	root.Input.Mouse.PDown = root.Input.Mouse.Down
-	root.Input.Mouse.Down = down
+func (state *State) Render(window *glfw.Window) {
+	state.Reset(window)
+	state.UpdateInput(window)
 
-	root.Panel(ui.Rect(float32(width-200), 0, 200, float32(height)), func() {
-		r := ui.Rect(0, 0, 200, 30)
-		d := ui.Point{0, r.Dy()}
-		if root.Button("alpha", r) {
-			log.Println("alpha pressed")
-		}
-		r = r.Offset(d)
-		if root.Button("beta", r) {
-			log.Println("beta pressed")
-		}
-		r = r.Offset(d)
-		if root.Button("gamma", r) {
-			log.Println("gamma pressed")
-		}
+	w, h := window.GetSize()
+	root := &ui.Context{
+		Backend: state.Backend,
+		Input:   state.Input,
+		Area:    ui.Block(0, 0, float32(w), float32(h)),
+	}
+
+	state.Backend.SetBack(ui.ColorHex(0xEEEEEEFF))
+	state.Backend.SetFore(ui.ColorHex(0xCCCCCCFF))
+	state.Backend.SetFontColor(ui.ColorHex(0x000000FF))
+
+	ui.Layout{root.Top(20)}.Panel().Left(ui.Buttons{
+		{"☺", nil},
+		{"File", nil},
+		{"Edit", nil},
+		{"Help", nil},
 	})
+
+	ui.Layout{root.Right(150)}.Panel().Top(ui.FixedHeight{
+		30,
+		ui.Buttons{
+			{"Alpha", nil},
+			{"Beta", nil},
+			{"Gamma", nil},
+			{"Delta", nil},
+			{"Iota", nil},
+		}})
+}
+
+type MainMenu struct{}
+
+func (menu *MainMenu) File() {
+	log.Println("File Pressed")
+}
+
+func (menu *MainMenu) Edit() {
+	log.Println("Edit Pressed")
+}
+
+func (menu *MainMenu) Help() {
+	log.Println("Help Pressed")
 }

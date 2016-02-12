@@ -47,7 +47,8 @@ type FontAtlas struct {
 	maxGlyphInRow int
 	drawPadding   float32
 
-	maxBounds fixed.Rectangle26_6
+	maxBounds  fixed.Rectangle26_6
+	lineHeight float32
 
 	Dirty   bool
 	Texture uint32
@@ -63,6 +64,7 @@ func NewFontAtlas(filename string, dpi, fontSize float64) (*FontAtlas, error) {
 	}
 
 	atlas.drawPadding = float32(fontSize * 0.5)
+	atlas.lineHeight = float32(fontSize * 1.2)
 
 	atlas.TTF, err = truetype.Parse(content)
 	if err != nil {
@@ -202,7 +204,7 @@ func (atlas *FontAtlas) upload() {
 	gl.Disable(gl.TEXTURE_2D)
 }
 
-func (atlas *FontAtlas) Draw(b Bounds, text string) {
+func (atlas *FontAtlas) Draw(text string, b Bounds) {
 	atlas.LoadGlyphs(text)
 
 	gl.Enable(gl.BLEND)
@@ -241,8 +243,24 @@ func (atlas *FontAtlas) Draw(b Bounds, text string) {
 
 		k := atlas.Face.Kern(p, r)
 		p = r
-		x += float32(ceilPx(glyph.Advance + k))
+		x += ceilPxf(glyph.Advance + k)
 	}
+}
+
+func (atlas *FontAtlas) Measure(text string) (size Point) {
+	atlas.LoadGlyphs(text)
+
+	size.X += atlas.drawPadding * 2
+	size.Y += atlas.lineHeight
+
+	p := rune(0)
+	for _, r := range text {
+		glyph := atlas.Rendered[r]
+		k := atlas.Face.Kern(p, r)
+		p = r
+		size.X += float32(ceilPx(glyph.Advance + k))
+	}
+	return
 }
 
 func drawRect(rgba *image.RGBA, bounds image.Rectangle, color color.RGBA) {
