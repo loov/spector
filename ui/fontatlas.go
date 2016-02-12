@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"io/ioutil"
@@ -23,6 +22,11 @@ func RelBounds(r, b image.Rectangle) (n Bounds) {
 	return n
 }
 
+const (
+	glyphMargin  = 2
+	glyphPadding = 1
+)
+
 type Glyph struct {
 	Rune    rune
 	Loc     image.Rectangle     // absolute location on image atlas
@@ -36,12 +40,14 @@ type FontAtlas struct {
 	TTF     *truetype.Font
 	Face    font.Face
 
-	Rendered       map[rune]Glyph
-	Image          *image.RGBA
-	CursorX        int
-	CursorY        int
-	Padding        int
-	MaxGlyphHeight int
+	Rendered      map[rune]Glyph
+	Image         *image.RGBA
+	CursorX       int
+	CursorY       int
+	maxGlyphInRow int
+	drawPadding   float32
+
+	maxBounds fixed.Rectangle26_6
 
 	Dirty   bool
 	Texture uint32
@@ -50,12 +56,13 @@ type FontAtlas struct {
 func NewFontAtlas(filename string, dpi, fontSize float64) (*FontAtlas, error) {
 	atlas := &FontAtlas{}
 	atlas.Rendered = make(map[rune]Glyph, 256)
-	atlas.Padding = 2
 
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
+
+	atlas.drawPadding = float32(fontSize * 0.5)
 
 	atlas.TTF, err = truetype.Parse(content)
 	if err != nil {
@@ -76,6 +83,8 @@ func NewFontAtlas(filename string, dpi, fontSize float64) (*FontAtlas, error) {
 	atlas.Context.SetSrc(image.White)
 	atlas.Context.SetDst(atlas.Image)
 
+	atlas.maxBounds = atlas.TTF.Bounds(fixed.I(int(fontSize)))
+
 	opts := &truetype.Options{}
 	opts.Size = fontSize
 	opts.Hinting = font.HintingNone
@@ -94,8 +103,6 @@ func ceilPxf(i fixed.Int26_6) float32 {
 	return float32(i) / div
 }
 
-const glyphPadding = 1
-
 func (atlas *FontAtlas) loadGlyph(r rune) {
 	if _, ok := atlas.Rendered[r]; ok {
 		return
@@ -112,13 +119,13 @@ func (atlas *FontAtlas) loadGlyph(r rune) {
 	width := ceilPx(bounds.Max.X-bounds.Min.X) + glyphPadding*2
 	height := ceilPx(bounds.Max.Y-bounds.Min.Y) + glyphPadding*2
 
-	if atlas.CursorX+atlas.Padding+width+atlas.Padding > atlas.Image.Bounds().Dx() {
+	if atlas.CursorX+glyphMargin+width+glyphMargin > atlas.Image.Bounds().Dx() {
 		atlas.CursorX = 0
-		atlas.CursorY += atlas.Padding + atlas.MaxGlyphHeight
+		atlas.CursorY += glyphMargin + atlas.maxGlyphInRow
 	}
 
-	x := atlas.CursorX + atlas.Padding
-	y := atlas.CursorY + atlas.Padding
+	x := atlas.CursorX + glyphMargin
+	y := atlas.CursorY + glyphMargin
 
 	glyph.Loc = image.Rect(x, y, x+width, y+height)
 	glyph.RelLoc = RelBounds(glyph.Loc, atlas.Image.Bounds())
@@ -127,10 +134,10 @@ func (atlas *FontAtlas) loadGlyph(r rune) {
 	// drawRect(atlas.Image, glyph.Loc, color.RGBA{0xFF, 0x00, 0x00, 0xFF})
 	atlas.Context.DrawString(string(r), pt)
 
-	if height > atlas.MaxGlyphHeight {
-		atlas.MaxGlyphHeight = height
+	if height > atlas.maxGlyphInRow {
+		atlas.maxGlyphInRow = height
 	}
-	atlas.CursorX += atlas.Padding + width + atlas.Padding
+	atlas.CursorX += glyphMargin + width + glyphMargin
 
 	atlas.Rendered[r] = glyph
 }
@@ -195,7 +202,7 @@ func (atlas *FontAtlas) upload() {
 	gl.Disable(gl.TEXTURE_2D)
 }
 
-func (atlas *FontAtlas) Draw(x, y float32, text string) {
+func (atlas *FontAtlas) Draw(b Bounds, text string) {
 	atlas.LoadGlyphs(text)
 
 	gl.Enable(gl.BLEND)
@@ -206,12 +213,19 @@ func (atlas *FontAtlas) Draw(x, y float32, text string) {
 	defer gl.Disable(gl.TEXTURE_2D)
 	gl.BindTexture(gl.TEXTURE_2D, atlas.Texture)
 
+	x := b.Min.X + atlas.drawPadding
+	y := (b.Max.Y+b.Min.Y)/2 + (ceilPxf(atlas.maxBounds.Min.Y)+ceilPxf(atlas.maxBounds.Max.Y))/2
+
 	p := rune(0)
 	for _, r := range text {
 		glyph := atlas.Rendered[r]
 
-		dx, dy := float32(glyph.Loc.Dx()), float32(glyph.Loc.Dy())
-		px, py := x+ceilPxf(glyph.Bounds.Min.X)-glyphPadding, y+ceilPxf(glyph.Bounds.Min.Y)-glyphPadding
+		dx := float32(glyph.Loc.Dx())
+		dy := float32(glyph.Loc.Dy())
+
+		px := x + ceilPxf(glyph.Bounds.Min.X) - glyphPadding
+		py := y + ceilPxf(glyph.Bounds.Min.Y) - glyphPadding
+
 		gl.Begin(gl.QUADS)
 		{
 			gl.TexCoord2f(glyph.RelLoc.Min.X, glyph.RelLoc.Min.Y)
@@ -229,10 +243,6 @@ func (atlas *FontAtlas) Draw(x, y float32, text string) {
 		p = r
 		x += float32(ceilPx(glyph.Advance + k))
 	}
-}
-
-func (atlas *FontAtlas) Drawf(x, y float32, format string, args ...interface{}) {
-	atlas.Draw(x, y, fmt.Sprintf(format, args...))
 }
 
 func drawRect(rgba *image.RGBA, bounds image.Rectangle, color color.RGBA) {
