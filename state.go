@@ -40,6 +40,7 @@ func NewState() *State {
 	state.Simulator.Start()
 	state.Dirty = true
 	state.UI = &ui.State{}
+	state.UI.Font = state.Atlas
 
 	return state
 }
@@ -73,7 +74,7 @@ func (state *State) Render(window *glfw.Window) {
 	gl.Viewport(0, 0, int32(width), int32(height))
 	gl.Ortho(0, float64(width), float64(height), 0, 30, -30)
 
-	view := NewView(V2{float32(width), float32(height)}, &state.Timeline)
+	view := NewView(V2{float32(width - 200), float32(height)}, &state.Timeline)
 	view.Atlas = state.Atlas
 	view.Render()
 
@@ -86,15 +87,21 @@ func (state *State) Render(window *glfw.Window) {
 	root.Input.Mouse.PDown = root.Input.Mouse.Down
 	root.Input.Mouse.Down = down
 
-	if root.Button("alpha", ui.Rect(10, 10, 100, 30)) {
-		log.Println("alpha pressed")
-	}
-	if root.Button("beta", ui.Rect(10, 50, 100, 30)) {
-		log.Println("beta pressed")
-	}
-	if root.Button("gamma", ui.Rect(10, 90, 100, 30)) {
-		log.Println("gamma pressed")
-	}
+	root.Panel(ui.Rect(float32(width-200), 0, 200, float32(height)), func() {
+		r := ui.Rect(0, 0, 200, 30)
+		d := ui.Point{0, r.Dy()}
+		if root.Button("alpha", r) {
+			log.Println("alpha pressed")
+		}
+		r = r.Offset(d)
+		if root.Button("beta", r) {
+			log.Println("beta pressed")
+		}
+		r = r.Offset(d)
+		if root.Button("gamma", r) {
+			log.Println("gamma pressed")
+		}
+	})
 }
 
 type V2 struct{ X, Y float32 }

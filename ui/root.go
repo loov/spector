@@ -1,10 +1,19 @@
 package ui
 
-import "github.com/go-gl/gl/v2.1/gl"
+import (
+	"github.com/go-gl/gl/v2.1/gl"
+
+	"github.com/egonelbre/spector/ui/font"
+)
 
 type ID int32
 
 type Point struct{ X, Y float32 }
+
+func (p Point) Offset(by Point) Point {
+	return Point{p.X + by.X, p.Y + by.Y}
+}
+
 type Bounds struct{ Min, Max Point }
 
 func Rect(x, y, w, h float32) Bounds {
@@ -17,6 +26,16 @@ func Rect(x, y, w, h float32) Bounds {
 	return Bounds{
 		Min: Point{x, y},
 		Max: Point{x + w, y + h},
+	}
+}
+
+func (b Bounds) Dx() float32 { return b.Max.X - b.Min.X }
+func (b Bounds) Dy() float32 { return b.Max.Y - b.Min.Y }
+
+func (b Bounds) Offset(by Point) Bounds {
+	return Bounds{
+		Min: b.Min.Offset(by),
+		Max: b.Max.Offset(by),
 	}
 }
 
@@ -49,7 +68,7 @@ func ColorHex(hex uint32) Color {
 
 var (
 	ButtonColor = StateColors{
-		Text:    ColorHex(0x333333ff),
+		Text:    ColorHex(0x000000ff),
 		Default: ColorHex(0xEEEEECff),
 		Hot:     ColorHex(0xD3D7CFff),
 		Active:  ColorHex(0xFCE94Fff),
@@ -75,6 +94,7 @@ type Input struct {
 }
 
 type State struct {
+	Font  *font.Atlas
 	Input Input
 }
 
@@ -102,7 +122,7 @@ func (state *State) StrokeRect(b Bounds) {
 }
 
 func (state *State) Text(text string, b Bounds) {
-
+	state.Font.Draw(b.Min.X+3, (b.Min.Y+b.Max.Y)/2, text)
 }
 
 func (state *State) Button(text string, b Bounds) (pressed bool) {
@@ -127,4 +147,24 @@ func (state *State) Button(text string, b Bounds) (pressed bool) {
 	state.Text(text, b)
 
 	return
+}
+
+func (state *State) Panel(b Bounds, fn func()) {
+	state.SelectColor(ButtonColor.Default)
+	state.Rect(b)
+
+	state.SelectColor(ButtonColor.Border)
+	state.StrokeRect(b)
+
+	gl.PushMatrix()
+	state.Input.Mouse.Position.X -= b.Min.X
+	state.Input.Mouse.Position.Y -= b.Min.Y
+	defer func() {
+		state.Input.Mouse.Position.X += b.Min.X
+		state.Input.Mouse.Position.Y += b.Min.Y
+		gl.PopMatrix()
+	}()
+
+	gl.Translatef(b.Min.X, b.Min.Y, 0)
+	fn()
 }
