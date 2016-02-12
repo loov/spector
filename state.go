@@ -11,14 +11,13 @@ import (
 	"github.com/egonelbre/spector/trace/simulator"
 
 	"github.com/egonelbre/spector/ui"
-	"github.com/egonelbre/spector/ui/font"
 )
 
 type State struct {
 	Timeline timeline.Timeline
 	Handler  timeline.Handler
 
-	Atlas *font.Atlas
+	Atlas *ui.FontAtlas
 
 	UI *ui.State
 
@@ -32,7 +31,7 @@ func NewState() *State {
 	state.Simulator = simulator.NewStream()
 
 	var err error
-	state.Atlas, err = font.NewAtlas("~DejaVuSans.ttf", 72, 12)
+	state.Atlas, err = ui.NewFontAtlas("~DejaVuSans.ttf", 72, 12)
 	if err != nil {
 		panic(err)
 	}
@@ -107,7 +106,7 @@ func (state *State) Render(window *glfw.Window) {
 type V2 struct{ X, Y float32 }
 
 type View struct {
-	Atlas    *font.Atlas
+	Atlas    *ui.FontAtlas
 	Timeline *timeline.Timeline
 
 	Size V2

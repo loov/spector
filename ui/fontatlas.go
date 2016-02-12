@@ -1,4 +1,4 @@
-package font
+package ui
 
 import (
 	"fmt"
@@ -15,11 +15,7 @@ import (
 	"github.com/go-gl/gl/v2.1/gl"
 )
 
-type Point struct{ X, Y float32 }
-
-type RelativeRectangle struct{ Min, Max Point }
-
-func RelativeRect(r, b image.Rectangle) (n RelativeRectangle) {
+func RelBounds(r, b image.Rectangle) (n Bounds) {
 	n.Min.X = float32(r.Min.X-b.Min.X) / float32(b.Dx())
 	n.Min.Y = float32(r.Min.Y-b.Min.Y) / float32(b.Dy())
 	n.Max.X = float32(r.Max.X-b.Min.X) / float32(b.Dx())
@@ -30,12 +26,12 @@ func RelativeRect(r, b image.Rectangle) (n RelativeRectangle) {
 type Glyph struct {
 	Rune    rune
 	Loc     image.Rectangle     // absolute location on image atlas
-	RelLoc  RelativeRectangle   // relative location on image atlas
+	RelLoc  Bounds              // relative location on image atlas
 	Bounds  fixed.Rectangle26_6 // such that point + bounds, gives image bounds where glyph should be drawn
 	Advance fixed.Int26_6       // advance from point, to the next glyph
 }
 
-type Atlas struct {
+type FontAtlas struct {
 	Context *freetype.Context
 	TTF     *truetype.Font
 	Face    font.Face
@@ -51,8 +47,8 @@ type Atlas struct {
 	Texture uint32
 }
 
-func NewAtlas(filename string, dpi, fontSize float64) (*Atlas, error) {
-	atlas := &Atlas{}
+func NewFontAtlas(filename string, dpi, fontSize float64) (*FontAtlas, error) {
+	atlas := &FontAtlas{}
 	atlas.Rendered = make(map[rune]Glyph, 256)
 	atlas.Padding = 2
 
@@ -100,7 +96,7 @@ func ceilPxf(i fixed.Int26_6) float32 {
 
 const glyphPadding = 1
 
-func (atlas *Atlas) loadGlyph(r rune) {
+func (atlas *FontAtlas) loadGlyph(r rune) {
 	if _, ok := atlas.Rendered[r]; ok {
 		return
 	}
@@ -125,7 +121,7 @@ func (atlas *Atlas) loadGlyph(r rune) {
 	y := atlas.CursorY + atlas.Padding
 
 	glyph.Loc = image.Rect(x, y, x+width, y+height)
-	glyph.RelLoc = RelativeRect(glyph.Loc, atlas.Image.Bounds())
+	glyph.RelLoc = RelBounds(glyph.Loc, atlas.Image.Bounds())
 
 	pt := fixed.P(x+glyphPadding, y+glyphPadding).Sub(bounds.Min)
 	// drawRect(atlas.Image, glyph.Loc, color.RGBA{0xFF, 0x00, 0x00, 0xFF})
@@ -139,28 +135,28 @@ func (atlas *Atlas) loadGlyph(r rune) {
 	atlas.Rendered[r] = glyph
 }
 
-func (atlas *Atlas) LoadAscii() {
+func (atlas *FontAtlas) LoadAscii() {
 	for r := rune(0); r < 128; r++ {
 		atlas.loadGlyph(r)
 	}
 	atlas.upload()
 }
 
-func (atlas *Atlas) LoadExtendedAscii() {
+func (atlas *FontAtlas) LoadExtendedAscii() {
 	for r := rune(0); r < 256; r++ {
 		atlas.loadGlyph(r)
 	}
 	atlas.upload()
 }
 
-func (atlas *Atlas) LoadGlyphs(text string) {
+func (atlas *FontAtlas) LoadGlyphs(text string) {
 	for _, r := range text {
 		atlas.loadGlyph(r)
 	}
 	atlas.upload()
 }
 
-func (atlas *Atlas) upload() {
+func (atlas *FontAtlas) upload() {
 	if !atlas.Dirty {
 		return
 	}
@@ -199,7 +195,7 @@ func (atlas *Atlas) upload() {
 	gl.Disable(gl.TEXTURE_2D)
 }
 
-func (atlas *Atlas) Draw(x, y float32, text string) {
+func (atlas *FontAtlas) Draw(x, y float32, text string) {
 	atlas.LoadGlyphs(text)
 
 	gl.Enable(gl.BLEND)
@@ -235,7 +231,7 @@ func (atlas *Atlas) Draw(x, y float32, text string) {
 	}
 }
 
-func (atlas *Atlas) Drawf(x, y float32, format string, args ...interface{}) {
+func (atlas *FontAtlas) Drawf(x, y float32, format string, args ...interface{}) {
 	atlas.Draw(x, y, fmt.Sprintf(format, args...))
 }
 

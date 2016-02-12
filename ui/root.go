@@ -2,8 +2,6 @@ package ui
 
 import (
 	"github.com/go-gl/gl/v2.1/gl"
-
-	"github.com/egonelbre/spector/ui/font"
 )
 
 type ID int32
@@ -94,7 +92,7 @@ type Input struct {
 }
 
 type State struct {
-	Font  *font.Atlas
+	Font  *FontAtlas
 	Input Input
 }
 
