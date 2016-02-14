@@ -18,16 +18,23 @@ type Backend interface {
 }
 
 type Context struct {
-	Backend
-	Area  Bounds
 	Input *Input
+	Backend
+	Area Bounds
+
+	ID    string
+	Index int
+	Count int
 }
 
 func (ctx *Context) Child(area Bounds) *Context {
+	ctx.Count++
 	return &Context{
+		Input:   ctx.Input,
 		Backend: ctx.Backend.Clone(),
 		Area:    area,
-		Input:   ctx.Input,
+		Index:   ctx.Count - 1,
+		Count:   0,
 	}
 }
 
