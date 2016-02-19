@@ -31,6 +31,14 @@ func Button(ctx *Context, text string) (pressed bool) {
 	return
 }
 
+func (ctx *Context) Text(text string) { Text(ctx, text) }
+
+func Text(ctx *Context, text string) {
+	if text != "" {
+		ctx.Backend.Text(text, ctx.Area)
+	}
+}
+
 type DynamicLayouter interface {
 	LayoutContext() *Context
 	NextSized(size Point) *Context

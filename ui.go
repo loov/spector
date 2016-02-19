@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"runtime"
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -13,6 +14,7 @@ type State struct {
 	Backend ui.Backend
 	Input   *ui.Input
 
+	MemStats      runtime.MemStats
 	SidePanelSize float32
 }
 
@@ -21,7 +23,7 @@ func NewState() *State {
 
 	state.Backend = ui.NewGLBackend()
 	state.Input = &ui.Input{}
-	state.SidePanelSize = 150
+	state.SidePanelSize = 350
 
 	return state
 }
@@ -72,18 +74,13 @@ func (state *State) Render(window *glfw.Window) {
 
 	ui.Buttons{
 		{"☺", nil},
-		{"File", nil},
-		{"Edit", nil},
-		{"Help", nil},
-	}.DoDynamic(ui.LayoutToRight(100, root.Top(20).Panel()))
+		{"Load", nil},
+		{"Save", nil},
+		{"Quit", nil},
+	}.DoDynamic(ui.LayoutToRight(50, root.Top(20).Panel()))
 
-	ui.Buttons{
-		{"Alpha", nil},
-		{"Beta", nil},
-		{"Gamma", nil},
-		{"Delta", nil},
-		{"Iota", nil},
-	}.Do(ui.LayoutToBottom(30, root.Right(state.SidePanelSize).Panel()))
+	runtime.ReadMemStats(&state.MemStats)
+	root.Right(state.SidePanelSize).Reflect(state.MemStats)
 
 	ui.DragX(root.Right(5), &state.SidePanelSize)
 }
