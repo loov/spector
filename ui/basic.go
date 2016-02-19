@@ -23,7 +23,10 @@ func Button(ctx *Context, text string) (pressed bool) {
 	ctx.Backend.SetBack(color)
 	ctx.Backend.Fill(ctx.Area)
 	ctx.Backend.Stroke(ctx.Area)
-	ctx.Backend.Text(text, ctx.Area)
+
+	if text != "" {
+		ctx.Backend.Text(text, ctx.Area)
+	}
 
 	return
 }

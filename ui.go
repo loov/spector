@@ -12,6 +12,8 @@ import (
 type State struct {
 	Backend ui.Backend
 	Input   *ui.Input
+
+	SidePanelSize float32
 }
 
 func NewState() *State {
@@ -19,6 +21,7 @@ func NewState() *State {
 
 	state.Backend = ui.NewGLBackend()
 	state.Input = &ui.Input{}
+	state.SidePanelSize = 150
 
 	return state
 }
@@ -44,13 +47,12 @@ func (state *State) Reset(window *glfw.Window) {
 }
 
 func (state *State) UpdateInput(window *glfw.Window) {
-	x, y := window.GetCursorPos()
-	down := window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
+	state.Input.Mouse.Update()
 
+	x, y := window.GetCursorPos()
 	state.Input.Mouse.Position.X = float32(x)
 	state.Input.Mouse.Position.Y = float32(y)
-	state.Input.Mouse.WasDown = state.Input.Mouse.Down
-	state.Input.Mouse.Down = down
+	state.Input.Mouse.Down = window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
 }
 
 func (state *State) Render(window *glfw.Window) {
@@ -81,7 +83,9 @@ func (state *State) Render(window *glfw.Window) {
 		{"Gamma", nil},
 		{"Delta", nil},
 		{"Iota", nil},
-	}.Do(ui.LayoutToBottom(30, root.Right(150).Panel()))
+	}.Do(ui.LayoutToBottom(30, root.Right(state.SidePanelSize).Panel()))
+
+	ui.DragX(root.Right(5), &state.SidePanelSize)
 }
 
 type MainMenu struct{}
