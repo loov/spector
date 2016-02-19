@@ -68,22 +68,20 @@ func (state *State) Render(window *glfw.Window) {
 	state.Backend.SetFore(ui.ColorHex(0xCCCCCCFF))
 	state.Backend.SetFontColor(ui.ColorHex(0x000000FF))
 
-	ui.Layout{root.Top(20)}.Panel().Left(ui.Buttons{
+	ui.Buttons{
 		{"☺", nil},
 		{"File", nil},
 		{"Edit", nil},
 		{"Help", nil},
-	})
+	}.DoDynamic(ui.LayoutToRight(100, root.Top(20).Panel()))
 
-	ui.Layout{root.Right(150)}.Panel().Top(ui.FixedHeight{
-		30,
-		ui.Buttons{
-			{"Alpha", nil},
-			{"Beta", nil},
-			{"Gamma", nil},
-			{"Delta", nil},
-			{"Iota", nil},
-		}})
+	ui.Buttons{
+		{"Alpha", nil},
+		{"Beta", nil},
+		{"Gamma", nil},
+		{"Delta", nil},
+		{"Iota", nil},
+	}.Do(ui.LayoutToBottom(30, root.Right(150).Panel()))
 }
 
 type MainMenu struct{}

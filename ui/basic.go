@@ -28,31 +28,77 @@ func Button(ctx *Context, text string) (pressed bool) {
 	return
 }
 
-type Items interface {
-	Len() int
-	Measure(ctx *Context, i int) Point
-	Render(ctx *Context, i int)
+type DynamicLayouter interface {
+	LayoutContext() *Context
+	NextSized(size Point) *Context
 }
 
-type Layout struct{ Context *Context }
-
-func (lay Layout) Panel() Layout {
-	lay.Context.Panel()
-	return lay
+type Layouter interface {
+	LayoutContext() *Context
+	Next() *Context
 }
 
-func (lay Layout) Left(items Items) {
-	for i, n := 0, items.Len(); i < n; i++ {
-		size := items.Measure(lay.Context, i)
-		items.Render(lay.Context.Left(size.X), i)
+type LayoutType byte
+
+const (
+	ToBottom = LayoutType(iota)
+	ToRight
+	ToLeft
+	ToTop
+)
+
+type Layout struct {
+	Height float32
+	Width  float32
+	Type   LayoutType
+
+	*Context
+}
+
+func LayoutToRight(w float32, ctx *Context) *Layout {
+	return &Layout{
+		Width:   w,
+		Type:    ToRight,
+		Context: ctx,
 	}
 }
 
-func (lay Layout) Top(items Items) {
-	for i, n := 0, items.Len(); i < n; i++ {
-		size := items.Measure(lay.Context, i)
-		items.Render(lay.Context.Top(size.Y), i)
+func LayoutToBottom(h float32, ctx *Context) *Layout {
+	return &Layout{
+		Height:  h,
+		Type:    ToBottom,
+		Context: ctx,
 	}
+}
+
+func (layout *Layout) LayoutContext() *Context { return layout.Context }
+
+func (layout *Layout) NextSized(size Point) *Context {
+	switch layout.Type {
+	case ToBottom:
+		return layout.Context.Top(size.Y)
+	case ToTop:
+		return layout.Context.Bottom(size.Y)
+	case ToRight:
+		return layout.Context.Left(size.X)
+	case ToLeft:
+		return layout.Context.Right(size.X)
+	}
+	panic("shouldn't happen")
+}
+
+func (layout *Layout) Next() *Context {
+	switch layout.Type {
+	case ToBottom:
+		return layout.Context.Top(layout.Height)
+	case ToTop:
+		return layout.Context.Bottom(layout.Height)
+	case ToRight:
+		return layout.Context.Left(layout.Width)
+	case ToLeft:
+		return layout.Context.Right(layout.Width)
+	}
+	panic("shouldn't happen")
 }
 
 type Callback struct {
@@ -62,23 +108,24 @@ type Callback struct {
 
 type Buttons []Callback
 
-type FixedHeight struct {
-	Height float32
-	Items
+func (list Buttons) DoDynamic(layout DynamicLayouter) {
+	context := layout.LayoutContext()
+	for _, button := range list {
+		size := context.Measure(button.Name)
+		if layout.NextSized(size).Button(button.Name) {
+			if button.Func != nil {
+				button.Func()
+			}
+		}
+	}
 }
 
-func (list FixedHeight) Measure(ctx *Context, i int) (size Point) {
-	size = list.Items.Measure(ctx, i)
-	size.Y = list.Height
-	return
-}
-
-func (list Buttons) Len() int                                 { return len(list) }
-func (list Buttons) Measure(ctx *Context, i int) (size Point) { return ctx.Measure(list[i].Name) }
-func (list Buttons) Render(ctx *Context, i int) {
-	if ctx.Button(list[i].Name) {
-		if list[i].Func != nil {
-			list[i].Func()
+func (list Buttons) Do(layout Layouter) {
+	for _, button := range list {
+		if layout.Next().Button(button.Name) {
+			if button.Func != nil {
+				button.Func()
+			}
 		}
 	}
 }

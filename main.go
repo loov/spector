@@ -7,12 +7,20 @@ import (
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
+
+	"net/http"
+	_ "net/http/pprof"
 )
 
 func init() { runtime.LockOSThread() }
 
 func main() {
 	flag.Parse()
+
+	go func() {
+
+		http.ListenAndServe("localhost:6060", nil)
+	}()
 
 	if err := glfw.Init(); err != nil {
 		log.Fatalln("failed to initialize glfw:", err)

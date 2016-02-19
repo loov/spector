@@ -23,6 +23,7 @@ func NewGLBackend() Backend {
 		panic(err)
 	}
 	back.current.fontSize = 12
+	back.atlas.LoadExtendedAscii()
 	return back
 }
 
