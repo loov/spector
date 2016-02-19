@@ -80,7 +80,7 @@ func (state *State) Render(window *glfw.Window) {
 	}.DoDynamic(ui.LayoutToRight(50, root.Top(20).Panel()))
 
 	runtime.ReadMemStats(&state.MemStats)
-	root.Right(state.SidePanelSize).Reflect(state.MemStats)
+	root.Right(state.SidePanelSize).Reflect("Input", state.Input)
 
 	ui.DragX(root.Right(5), &state.SidePanelSize)
 }
