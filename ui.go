@@ -49,7 +49,7 @@ func (state *State) Reset(window *glfw.Window) {
 }
 
 func (state *State) UpdateInput(window *glfw.Window) {
-	state.Input.Mouse.Update()
+	state.Input.Update()
 
 	x, y := window.GetCursorPos()
 	state.Input.Mouse.Position.X = float32(x)
@@ -82,7 +82,7 @@ func (state *State) Render(window *glfw.Window) {
 	runtime.ReadMemStats(&state.MemStats)
 	root.Right(state.SidePanelSize).Reflect("Input", state.Input)
 
-	ui.DragX(root.Right(5), &state.SidePanelSize)
+	ui.DragX(root.Right(5).WithID("side-panel-size"), &state.SidePanelSize)
 }
 
 type MainMenu struct{}

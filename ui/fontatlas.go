@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"io/ioutil"
 	"log"
+	"math"
 
 	"github.com/golang/freetype"
 	"github.com/golang/freetype/truetype"
@@ -227,6 +228,12 @@ func (atlas *FontAtlas) Draw(text string, b Bounds) {
 
 		px := x + ceilPxf(glyph.Bounds.Min.X) - glyphPadding
 		py := y + ceilPxf(glyph.Bounds.Min.Y) - glyphPadding
+
+		// this is not the ideal way of positioning the letters
+		// will create positioning artifacts
+		// but it the result is more
+		px = float32(math.Trunc(float64(px)))
+		py = float32(math.Trunc(float64(py)))
 
 		gl.Begin(gl.QUADS)
 		{

@@ -24,4 +24,13 @@ func (m *Mouse) Clicked() bool {
 
 type Input struct {
 	Mouse Mouse
+
+	ActiveID string
+	NextID   string
+}
+
+func (in *Input) Update() {
+	in.Mouse.Update()
+	in.ActiveID = in.NextID
+	in.NextID = ""
 }

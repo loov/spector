@@ -16,6 +16,11 @@ func DragX(ctx *Context, value *float32) {
 	ctx.Backend.Stroke(ctx.Area)
 
 	if pressed {
+		ctx.Input.NextID = ctx.ID
+	}
+
+	if ctx.Input.ActiveID == ctx.ID && ctx.Input.Mouse.Down{
 		*value += ctx.Input.Mouse.Last.Position.X - ctx.Input.Mouse.Position.X
+		ctx.Input.NextID = ctx.ID
 	}
 }

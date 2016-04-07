@@ -18,7 +18,6 @@ func main() {
 	flag.Parse()
 
 	go func() {
-
 		http.ListenAndServe("localhost:6060", nil)
 	}()
 
