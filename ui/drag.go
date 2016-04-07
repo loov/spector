@@ -1,13 +1,15 @@
 package ui
 
-func DragX(ctx *Context, value *float32) {
+type OnDrag func(delta float32)
+
+func DragX(ctx *Context, ondrag OnDrag) {
 	color := ButtonColor.Default
-	pressed := false
+	down := false
 	if ctx.Input.Mouse.PointsAt(ctx.Area) {
 		color = ButtonColor.Hot
-		if ctx.Input.Mouse.Down {
+		if ctx.Input.Mouse.Down  {
 			color = ButtonColor.Active
-			pressed = true
+			down = true
 		}
 	}
 
@@ -15,12 +17,27 @@ func DragX(ctx *Context, value *float32) {
 	ctx.Backend.Fill(ctx.Area)
 	ctx.Backend.Stroke(ctx.Area)
 
-	if pressed {
-		ctx.Input.NextID = ctx.ID
+	if down && !ctx.Input.Mouse.Last.Down {
+		DoDragX(ctx, ondrag)
 	}
+}
 
-	if ctx.Input.ActiveID == ctx.ID && ctx.Input.Mouse.Down{
-		*value += ctx.Input.Mouse.Last.Position.X - ctx.Input.Mouse.Position.X
-		ctx.Input.NextID = ctx.ID
+func DoDragX(ctx *Context, ondrag OnDrag) {
+	ctx.Input.Mouse.Drag = func(ctx *Context) bool {
+		delta := ctx.Input.Mouse.Last.Position.X - ctx.Input.Mouse.Position.X
+		if delta != 0 {
+			ondrag(delta)
+		}
+		return ctx.Input.Mouse.Down
+	}
+}
+
+func DoDragY(ctx *Context, ondrag OnDrag) {
+	ctx.Input.Mouse.Drag = func(ctx *Context) bool {
+		delta := ctx.Input.Mouse.Last.Position.Y - ctx.Input.Mouse.Position.Y
+		if delta != 0 {
+			ondrag(delta)
+		}
+		return ctx.Input.Mouse.Down
 	}
 }

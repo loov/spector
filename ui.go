@@ -68,21 +68,30 @@ func (state *State) Render(window *glfw.Window) {
 		Area:    ui.Block(0, 0, float32(w), float32(h)),
 	}
 
+	if root.Input.Mouse.Drag != nil {
+		if !root.Input.Mouse.Drag(root) {
+			root.Input.Mouse.Drag = nil
+		}
+	}
+
 	state.Backend.SetBack(ui.ColorHex(0xEEEEEEFF))
 	state.Backend.SetFore(ui.ColorHex(0xCCCCCCFF))
 	state.Backend.SetFontColor(ui.ColorHex(0x000000FF))
 
+	mm := &MainMenu{}
 	ui.Buttons{
-		{"☺", nil},
+		{"☺", mm.File},
 		{"Load", nil},
 		{"Save", nil},
 		{"Quit", nil},
 	}.DoDynamic(ui.LayoutToRight(50, root.Top(20).Panel()))
 
 	runtime.ReadMemStats(&state.MemStats)
-	root.Right(state.SidePanelSize).Reflect("Input", state.Input)
+	root.Right(state.SidePanelSize).Reflect("Mem", &state.MemStats)
 
-	ui.DragX(root.Right(5).WithID("side-panel-size"), &state.SidePanelSize)
+	ui.DragX(root.Right(5), func(delta float32) {
+		state.SidePanelSize += delta
+	})
 }
 
 type MainMenu struct{}

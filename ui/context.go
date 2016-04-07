@@ -27,18 +27,6 @@ type Context struct {
 	Count int
 }
 
-func (ctx *Context) WithID(id string) *Context {
-	ctx.Count++
-	return &Context{
-		Input:   ctx.Input,
-		Backend: ctx.Backend.Clone(),
-		Area:    ctx.Area,
-		ID:      id,
-		Index:   ctx.Count - 1,
-		Count:   0,
-	}
-}
-
 func (ctx *Context) Child(area Bounds) *Context {
 	ctx.Count++
 	return &Context{

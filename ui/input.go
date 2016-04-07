@@ -7,6 +7,7 @@ type Mouse struct {
 		Position Point
 		Down     bool
 	}
+	Drag func(ctx *Context) (done bool)
 }
 
 func (m *Mouse) Update() {
@@ -24,13 +25,8 @@ func (m *Mouse) Clicked() bool {
 
 type Input struct {
 	Mouse Mouse
-
-	ActiveID string
-	NextID   string
 }
 
 func (in *Input) Update() {
 	in.Mouse.Update()
-	in.ActiveID = in.NextID
-	in.NextID = ""
 }
