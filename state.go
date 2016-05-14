@@ -37,7 +37,6 @@ func NewState() *State {
 	if err != nil {
 		panic(err)
 	}
-	state.Atlas.LoadExtendedAscii()
 
 	state.Simulator.Start()
 	state.Dirty = true

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"image"
-	"image/color"
 	"io/ioutil"
 	"log"
 	"math"
@@ -73,14 +72,12 @@ func NewFontAtlas(filename string, dpi, fontSize float64) (*FontAtlas, error) {
 	}
 
 	atlas.Image = image.NewRGBA(image.Rect(0, 0, 1024, 1024))
-	// draw.Draw(atlas.Image, atlas.Image.Bounds(), image.Black, image.ZP, draw.Src)
 
 	atlas.Context = freetype.NewContext()
 	atlas.Context.SetDPI(dpi)
 
 	atlas.Context.SetFont(atlas.TTF)
 	atlas.Context.SetFontSize(fontSize)
-	atlas.Context.SetHinting(font.HintingNone)
 
 	atlas.Context.SetClip(atlas.Image.Bounds())
 	atlas.Context.SetSrc(image.White)
@@ -90,7 +87,7 @@ func NewFontAtlas(filename string, dpi, fontSize float64) (*FontAtlas, error) {
 
 	opts := &truetype.Options{}
 	opts.Size = fontSize
-	opts.Hinting = font.HintingNone
+	opts.Hinting = font.HintingFull
 
 	atlas.Face = truetype.NewFace(atlas.TTF, opts)
 	return atlas, nil
@@ -134,7 +131,6 @@ func (atlas *FontAtlas) loadGlyph(r rune) {
 	glyph.RelLoc = RelBounds(glyph.Loc, atlas.Image.Bounds())
 
 	pt := fixed.P(x+glyphPadding, y+glyphPadding).Sub(bounds.Min)
-	// drawRect(atlas.Image, glyph.Loc, color.RGBA{0xFF, 0x00, 0x00, 0xFF})
 	atlas.Context.DrawString(string(r), pt)
 
 	if height > atlas.maxGlyphInRow {
@@ -268,21 +264,4 @@ func (atlas *FontAtlas) Measure(text string) (size Point) {
 		size.X += float32(ceilPx(glyph.Advance + k))
 	}
 	return
-}
-
-func drawRect(rgba *image.RGBA, bounds image.Rectangle, color color.RGBA) {
-	for x := bounds.Min.X; x <= bounds.Max.X; x++ {
-		rgba.SetRGBA(x, bounds.Min.Y, color)
-		rgba.SetRGBA(x, bounds.Max.Y, color)
-	}
-	for y := bounds.Min.Y; y <= bounds.Max.Y; y++ {
-		rgba.SetRGBA(bounds.Min.X, y, color)
-		rgba.SetRGBA(bounds.Max.X, y, color)
-	}
-}
-
-func drawVertLine(rgba *image.RGBA, x int, bounds image.Rectangle, color color.RGBA) {
-	for y := bounds.Min.Y; y <= bounds.Max.Y; y++ {
-		rgba.SetRGBA(x, y, color)
-	}
 }

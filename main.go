@@ -4,9 +4,12 @@ import (
 	"flag"
 	"log"
 	"runtime"
+	"time"
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
+
+	"github.com/egonelbre/spector/ui"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -54,8 +57,19 @@ func main() {
 			state = NewState()
 		}
 
+		start := time.Now()
 		state.Update(1.0 / 60.0)
+		updateTime := time.Since(start)
+
+		start = time.Now()
 		state.Render(window)
+		renderTime := time.Since(start)
+
+		text := "update:" + updateTime.String() + " render: " + renderTime.String()
+		w, h := window.GetSize()
+		state.Backend.SetFontColor(ui.ColorHex(0xFF0000FF))
+		size := state.Backend.Measure(text)
+		state.Backend.Text(text, ui.Block(float32(w)-size.X, float32(h)-size.Y, size.X, size.Y))
 
 		window.SwapBuffers()
 		glfw.PollEvents()
