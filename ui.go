@@ -16,6 +16,8 @@ type State struct {
 
 	MemStats      runtime.MemStats
 	SidePanelSize float32
+
+	Box ui.Point
 }
 
 func NewState() *State {
@@ -24,6 +26,8 @@ func NewState() *State {
 	state.Backend = ui.NewGLBackend()
 	state.Input = &ui.Input{}
 	state.SidePanelSize = 350
+
+	state.Box = ui.Pt(10, 10)
 
 	return state
 }
@@ -86,11 +90,26 @@ func (state *State) Render(window *glfw.Window) {
 		{"Quit", nil},
 	}.DoDynamic(ui.LayoutToRight(50, root.Top(20).Panel()))
 
+	boxbounds := ui.Bounds{
+		state.Box,
+		state.Box.Offset(ui.Point{30, 30})}
+
 	runtime.ReadMemStats(&state.MemStats)
 	root.Right(state.SidePanelSize).Reflect("Mem", &state.MemStats)
 
-	ui.DragX(root.Right(5), func(delta float32) {
-		state.SidePanelSize += delta
+	ui.SplitterX(root.Right(5), func(delta float32) {
+		state.SidePanelSize -= delta
+	})
+
+	box := root.Child(boxbounds)
+	box.Backend.SetBack(ui.ColorHex(0xFF88EEFF))
+	box.Backend.SetFore(ui.ColorHex(0xFF88EEFF))
+	box.Backend.Fill(box.Area)
+	box.Backend.Stroke(box.Area)
+
+	ui.DoDragXY(box, func(dx, dy float32) {
+		state.Box.X += dx
+		state.Box.Y += dy
 	})
 }
 
