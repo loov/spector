@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"runtime"
 	"time"
@@ -65,7 +66,9 @@ func main() {
 		state.Render(window)
 		renderTime := time.Since(start)
 
-		text := "update:" + updateTime.String() + " render: " + renderTime.String()
+		text := fmt.Sprintf("update: %.2fms render: %.2fms",
+			float32(updateTime)/float32(time.Millisecond),
+			float32(renderTime)/float32(time.Millisecond))
 		w, h := window.GetSize()
 		state.Backend.SetFontColor(ui.ColorHex(0xFF0000FF))
 		size := state.Backend.Measure(text)

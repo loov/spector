@@ -1,9 +1,7 @@
-// +build ignore
-
 package main
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -19,9 +17,8 @@ type State struct {
 	Timeline timeline.Timeline
 	Handler  timeline.Handler
 
-	Atlas *ui.FontAtlas
-
-	UI *ui.State
+	Backend ui.Backend
+	Input   *ui.Input
 
 	Simulator *simulator.Stream
 	Dirty     bool
@@ -32,16 +29,11 @@ func NewState() *State {
 	state.Handler.Timeline = &state.Timeline
 	state.Simulator = simulator.NewStream()
 
-	var err error
-	state.Atlas, err = ui.NewFontAtlas("~DejaVuSans.ttf", 72, 12)
-	if err != nil {
-		panic(err)
-	}
-
 	state.Simulator.Start()
 	state.Dirty = true
-	state.UI = &ui.State{}
-	state.UI.Font = state.Atlas
+
+	state.Backend = ui.NewGLBackend()
+	state.Input = &ui.Input{}
 
 	return state
 }
@@ -57,12 +49,7 @@ func (state *State) Update(dt float32) {
 	}
 }
 
-func (state *State) Render(window *glfw.Window) {
-	if !state.Dirty {
-		return
-	}
-	state.Dirty = false
-
+func (state *State) Reset(window *glfw.Window) {
 	gl.ClearColor(1, 1, 1, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 	gl.MatrixMode(gl.MODELVIEW)
@@ -74,63 +61,79 @@ func (state *State) Render(window *glfw.Window) {
 	width, height := window.GetSize()
 	gl.Viewport(0, 0, int32(width), int32(height))
 	gl.Ortho(0, float64(width), float64(height), 0, 30, -30)
+}
 
-	view := NewView(V2{float32(width - 200), float32(height)}, &state.Timeline)
-	view.Atlas = state.Atlas
-	view.Render()
+func (state *State) UpdateInput(window *glfw.Window) {
+	state.Input.Update()
 
 	x, y := window.GetCursorPos()
-	down := window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
-
-	root := state.UI
-
-	root.Input.Mouse.Position = ui.Point{float32(x), float32(y)}
-	root.Input.Mouse.PDown = root.Input.Mouse.Down
-	root.Input.Mouse.Down = down
-
-	root.Panel(ui.Rect(float32(width-200), 0, 200, float32(height)), func() {
-		r := ui.Rect(0, 0, 200, 30)
-		d := ui.Point{0, r.Dy()}
-		if root.Button("alpha", r) {
-			log.Println("alpha pressed")
-		}
-		r = r.Offset(d)
-		if root.Button("beta", r) {
-			log.Println("beta pressed")
-		}
-		r = r.Offset(d)
-		if root.Button("gamma", r) {
-			log.Println("gamma pressed")
-		}
-	})
+	state.Input.Mouse.Position.X = float32(x)
+	state.Input.Mouse.Position.Y = float32(y)
+	state.Input.Mouse.Down = window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
 }
 
-type V2 struct{ X, Y float32 }
+func (state *State) Render(window *glfw.Window) {
+	if !state.Dirty {
+		return
+	}
+	state.Dirty = false
+
+	state.Reset(window)
+	state.UpdateInput(window)
+
+	w, h := window.GetSize()
+	root := &ui.Context{
+		Backend: state.Backend,
+		Input:   state.Input,
+		Area:    ui.Block(0, 0, float32(w), float32(h)),
+	}
+
+	if root.Input.Mouse.Drag != nil {
+		if !root.Input.Mouse.Drag(root) {
+			root.Input.Mouse.Drag = nil
+		}
+	}
+
+	state.Backend.SetBack(ui.ColorHex(0xEEEEEEFF))
+	state.Backend.SetFore(ui.ColorHex(0xCCCCCCFF))
+	state.Backend.SetFontColor(ui.ColorHex(0x000000FF))
+
+	view := NewView(root, &state.Timeline)
+	view.Render()
+}
+
+type Camera struct {
+	Start     trace.Time
+	Stop      trace.Time
+	Span      trace.Time
+	TimePerPx trace.Time
+}
 
 type View struct {
-	Atlas    *ui.FontAtlas
+	Context  *ui.Context
 	Timeline *timeline.Timeline
 
-	Size V2
+	Size ui.Point
 	Y    float32
 
-	Start trace.Time // time
-	Stop  trace.Time // time
-	Span  trace.Time // time
-
-	TimePerPx trace.Time // time / px
+	Camera
+	Target Camera
 }
 
-func NewView(size V2, timeline *timeline.Timeline) *View {
+func NewView(context *ui.Context, timeline *timeline.Timeline) *View {
 	ui := &View{}
 	ui.Timeline = timeline
-	ui.Size = size
+	ui.Context = context
+	ui.Size = context.Area.Size()
 
 	ui.Start = 0
 	ui.Stop = 1e5
+	if len(timeline.Procs) > 0 {
+		ui.Stop = timeline.Procs[0].Time
+	}
 	ui.Span = ui.Stop - ui.Start
 
-	ui.TimePerPx = ui.Span / trace.Time(size.X)
+	ui.TimePerPx = ui.Span / trace.Time(context.Area.Dx())
 	return ui
 }
 
@@ -148,117 +151,55 @@ var (
 	}
 )
 
-func IDColor(id trace.ID) (r, g, b, a float32) {
+func IDColor(id trace.ID) ui.Color {
 	h := float32((id*31)%256) / 256.0
-	return HSLA(h, 0.7, 0.8, 1)
+	return ui.ColorHSLA(h, 0.7, 0.8, 1)
 }
 
-func (ui *View) Render() {
+func min(a, b trace.Time) trace.Time {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func (view *View) Render() {
 	const TrackPadding = 4
 	const LayerHeight = 10
 	const LayerPadding = 3
 
-	ui.H(fontViewSummary, "%d", ui.Timeline.TotalEvents)
+	view.H(fontViewSummary, "%d", view.Timeline.TotalEvents)
 
-	for _, proc := range ui.Timeline.Procs {
-		ui.H(fontProcHeader, "M:%08X P:%08X", proc.MID, proc.PID)
+	for _, proc := range view.Timeline.Procs {
+		view.H(fontProcHeader, "M:%08X P:%08X", proc.MID, proc.PID)
 
 		for _, track := range proc.Tracks {
-			ui.Pad(TrackPadding)
+			view.Pad(TrackPadding)
 
-			maxY := ui.Y
-			baseY := ui.Y
+			maxY := view.Y
+			baseY := view.Y
 
 			for _, thread := range track.Threads {
-				ui.Y = baseY
+				view.Y = baseY
 
-				ui.Block(
+				view.Block(
 					thread.TID,
-					thread.Start, thread.Stop,
+					thread.Start, min(thread.Stop, proc.Time),
 					float32(len(thread.Layers)*LayerHeight),
 				)
 				for i, layer := range thread.Layers {
 					depth := float32(len(thread.Layers)-i) / float32(len(thread.Layers))
-					ui.Spans(layer, depth, LayerHeight)
+					view.Spans(proc, layer, depth, LayerHeight)
 				}
-				ui.Pad(LayerPadding)
+				view.Pad(LayerPadding)
 
-				if ui.Y > maxY {
-					maxY = ui.Y
+				if view.Y > maxY {
+					maxY = view.Y
 				}
 			}
-			ui.Y = maxY
+			view.Y = maxY
 		}
 	}
-}
-
-func (ui *View) Rect(p, size V2) {
-	gl.Begin(gl.QUADS)
-	{
-		gl.Vertex2f(p.X, p.Y)
-		gl.Vertex2f(p.X+size.X, p.Y)
-		gl.Vertex2f(p.X+size.X, p.Y+size.Y)
-		gl.Vertex2f(p.X, p.Y+size.Y)
-	}
-	gl.End()
-}
-
-func (ui *View) Bound(p, size V2) {
-	gl.Begin(gl.LINE_LOOP)
-	{
-		gl.Vertex2f(p.X, p.Y)
-		gl.Vertex2f(p.X+size.X-1, p.Y)
-		gl.Vertex2f(p.X+size.X-1, p.Y+size.Y)
-		gl.Vertex2f(p.X, p.Y+size.Y)
-	}
-	gl.End()
-}
-
-func RGBA(color uint32) (r, g, b, a uint8) {
-	r = uint8(color >> 24)
-	g = uint8(color >> 16)
-	b = uint8(color >> 8)
-	a = uint8(color >> 0)
-	return
-}
-
-func hue(v1, v2, h float32) float32 {
-	if h < 0 {
-		h += 1
-	}
-	if h > 1 {
-		h -= 1
-	}
-	if 6*h < 1 {
-		return v1 + (v2-v1)*6*h
-	} else if 2*h < 1 {
-		return v2
-	} else if 3*h < 2 {
-		return v1 + (v2-v1)*(2.0/3.0-h)*6
-	}
-
-	return v1
-}
-
-func HSLA(h, s, l, a float32) (r, g, b, ra float32) {
-	if s == 0 {
-		return l, l, l, a
-	}
-
-	var v2 float32
-	if l < 0.5 {
-		v2 = l * (1 + s)
-	} else {
-		v2 = (l + s) - s*l
-	}
-
-	v1 := 2*l - v2
-	r = hue(v1, v2, h+1.0/3.0)
-	g = hue(v1, v2, h)
-	b = hue(v1, v2, h-1.0/3.0)
-	ra = a
-
-	return
 }
 
 type Font struct {
@@ -267,46 +208,47 @@ type Font struct {
 	Background uint32
 }
 
-func (ui *View) H(font *Font, format string, args ...interface{}) {
-	gl.Color4ub(RGBA(font.Background))
-	ui.Rect(V2{0, ui.Y}, V2{ui.Size.X, font.Height})
-	ui.Y += font.Height
+func (view *View) H(font *Font, format string, args ...interface{}) {
+	view.Context.Backend.SetBack(ui.ColorHex(font.Background))
+	view.Context.Backend.SetFontColor(ui.ColorHex(font.Foreground))
+	bounds := ui.Block(0, view.Y, view.Size.X, font.Height)
+	view.Context.Backend.Fill(bounds)
+	text := fmt.Sprintf(format, args...)
+	view.Context.Backend.Text(text, bounds)
 
-	gl.Color4ub(RGBA(font.Foreground))
-	ui.Atlas.Drawf(10, ui.Y-4, format, args...)
+	view.Y += font.Height
 }
 
-func (ui *View) Pad(height float32) {
-	ui.Y += height
+func (view *View) Pad(height float32) {
+	view.Y += height
 }
 
-func (ui *View) TimeToPx(t trace.Time) float32 {
-	v := float32(t-ui.Start) * ui.Size.X / float32(ui.Span)
-	if v > ui.Size.X {
-		v = ui.Size.X
+func (view *View) TimeToPx(t trace.Time) float32 {
+	v := float32(t-view.Start) * view.Size.X / float32(view.Span)
+	if v > view.Size.X {
+		v = view.Size.X
 	}
 	return v
 }
 
-func (ui *View) Block(id trace.ID, start, stop trace.Time, height float32) {
-	x0, x1 := ui.TimeToPx(start), ui.TimeToPx(stop)
+func (view *View) Block(id trace.ID, start, stop trace.Time, height float32) {
+	x0, x1 := view.TimeToPx(start), view.TimeToPx(stop)
 
-	// ui.H at x0, x1
-	ui.Pad(2)
-	gl.Color4f(IDColor(id))
-	ui.Rect(V2{x0, ui.Y}, V2{x1 - x0, height})
+	view.Pad(2)
+	view.Context.SetBack(IDColor(id))
+	view.Context.Backend.Fill(ui.Block(x0, view.Y, x1-x0, height))
 }
 
-func (ui *View) Spans(layer *timeline.Layer, depth, height float32) {
-	mingap := ui.TimePerPx
-	// gl.Color3d(IDColor(depth))
-	gl.Color4f(0.5, depth, depth, 1)
+func (view *View) Spans(proc *timeline.Proc, layer *timeline.Layer, depth, height float32) {
+	mingap := view.TimePerPx * 2
+
+	view.Context.SetBack(ui.ColorFloat(0.5, depth, depth, 1))
 	for i := 0; i < len(layer.Spans); i++ {
 		span := layer.Spans[i]
-		if span.Stop < ui.Start {
+		if span.Stop < view.Start {
 			continue
 		}
-		if span.Start > ui.Stop {
+		if span.Start > view.Stop {
 			break
 		}
 
@@ -320,8 +262,9 @@ func (ui *View) Spans(layer *timeline.Layer, depth, height float32) {
 			join.Stop = last.Stop
 		}
 
-		x0, x1 := ui.TimeToPx(join.Start), ui.TimeToPx(join.Stop)
-		ui.Rect(V2{x0, ui.Y}, V2{x1 - x0, height})
+		x0 := view.TimeToPx(join.Start)
+		x1 := view.TimeToPx(min(join.Stop, proc.Time))
+		view.Context.Backend.Fill(ui.Block(x0, view.Y, x1-x0, height))
 	}
-	ui.Y += height
+	view.Y += height
 }

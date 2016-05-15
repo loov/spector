@@ -18,10 +18,9 @@ func Block(x, y, w, h float32) Bounds {
 	}
 }
 
-func (p Point) Offset(by Point) Point {
-	return Point{p.X + by.X, p.Y + by.Y}
-}
+func (p Point) Offset(by Point) Point { return Point{p.X + by.X, p.Y + by.Y} }
 
+func (b Bounds) Size() Point { return Point{b.Dx(), b.Dy()} }
 func (b Bounds) Dx() float32 { return b.Max.X - b.Min.X }
 func (b Bounds) Dy() float32 { return b.Max.Y - b.Min.Y }
 

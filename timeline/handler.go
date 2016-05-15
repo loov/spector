@@ -33,12 +33,14 @@ func (h *Handler) Handle(ev trace.Event) {
 		timeline.Procs = append(timeline.Procs, h.Proc)
 	case *trace.StreamStop:
 		assert(proc != nil)
+		proc.Time = ev.Time
 
 		proc.Stop = ev.Time
 		proc = nil
 
 	case *trace.ThreadStart:
 		assert(proc != nil)
+		proc.Time = ev.Time
 
 		thread := &Thread{
 			TID:   ev.ThreadID,
@@ -51,6 +53,8 @@ func (h *Handler) Handle(ev trace.Event) {
 		proc.Threads = append(proc.Threads, thread)
 	case *trace.ThreadStop:
 		assert(proc != nil)
+		proc.Time = ev.Time
+
 		thread, ok := proc.ThreadByID(ev.ThreadID)
 		assert(ok)
 
@@ -58,18 +62,24 @@ func (h *Handler) Handle(ev trace.Event) {
 		thread.CloseLayers(ev.Time)
 	case *trace.ThreadSleep:
 		assert(proc != nil)
+		proc.Time = ev.Time
+
 		_, ok := proc.ThreadByID(ev.ThreadID)
 		assert(ok)
 
 		//TODO
 	case *trace.ThreadWake:
 		assert(proc != nil)
+		proc.Time = ev.Time
+
 		_, ok := proc.ThreadByID(ev.ThreadID)
 		assert(ok)
 		//TODO
 
 	case *trace.SpanBegin:
 		assert(proc != nil)
+		proc.Time = ev.Time
+
 		thread, ok := proc.ThreadByID(ev.ThreadID)
 		assert(ok)
 
@@ -77,6 +87,8 @@ func (h *Handler) Handle(ev trace.Event) {
 		layer.OpenSpan(ev.ID, ev.Time)
 	case *trace.SpanEnd:
 		assert(proc != nil)
+		proc.Time = ev.Time
+
 		thread, ok := proc.ThreadByID(ev.ThreadID)
 		assert(ok)
 

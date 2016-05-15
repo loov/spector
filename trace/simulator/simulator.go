@@ -45,8 +45,8 @@ func NewStream() *Stream {
 		Async:   2,
 		Threads: 20,
 	}
-	stream.eventInterval = 100 * time.Millisecond
-	stream.threadInterval = 150 * time.Millisecond
+	stream.eventInterval = 10 * time.Millisecond
+	stream.threadInterval = 15 * time.Millisecond
 
 	return stream
 }
