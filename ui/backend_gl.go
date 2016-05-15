@@ -18,7 +18,7 @@ type glbackend struct {
 func NewGLBackend() Backend {
 	back := &glbackend{}
 	var err error
-	back.atlas, err = NewFontAtlas("~DejaVuSans.ttf", 72, 12)
+	back.atlas, err = NewFontAtlas("DefaultFont.ttf", 72, 12)
 	if err != nil {
 		panic(err)
 	}
