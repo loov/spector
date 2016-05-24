@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math"
 	"runtime"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-gl/glfw/v3.1/glfw"
 
 	"github.com/egonelbre/spector/ui/draw"
+	"github.com/egonelbre/spector/ui/draw/render-gl21"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -47,8 +49,12 @@ func main() {
 	if err := gl.Init(); err != nil {
 		panic(err)
 	}
-	var DrawList draw.List
 
+	if err := gl.GetError(); err != 0 {
+		fmt.Println("INIT", err)
+	}
+
+	var DrawList draw.List
 	for !window.ShouldClose() {
 		if window.GetKey(glfw.KeyEscape) == glfw.Press {
 			return
@@ -58,16 +64,13 @@ func main() {
 		width, height := window.GetSize()
 
 		{ // reset window
-			gl.ClearColor(1, 1, 1, 1)
-			gl.Clear(gl.COLOR_BUFFER_BIT)
 			gl.MatrixMode(gl.MODELVIEW)
 			gl.LoadIdentity()
 
-			gl.Disable(gl.DEPTH)
-			gl.Enable(gl.FRAMEBUFFER_SRGB)
-
 			gl.Viewport(0, 0, int32(width), int32(height))
 			gl.Ortho(0, float64(width), float64(height), 0, 30, -30)
+			gl.ClearColor(1, 1, 1, 1)
+			gl.Clear(gl.COLOR_BUFFER_BIT)
 		}
 
 		DrawList.Reset()
@@ -98,35 +101,10 @@ func main() {
 		}
 		DrawList.AddLine(circle[:], true, 10.0, draw.Green)
 
-		gl.Begin(gl.TRIANGLES)
-		indices := DrawList.Indicies
-		vertices := DrawList.Vertices
-		for _, cmd := range DrawList.Commands {
-			if cmd.Texture == 0 {
-				lastColor := draw.Color{0, 0, 0, 0}
-				for _, vi := range indices[:cmd.Count] {
-					v := vertices[int(vi)]
-					if lastColor != v.Color {
-						gl.Color4ub(v.Color.R, v.Color.G, v.Color.B, v.Color.A)
-						lastColor = v.Color
-					}
-					gl.Vertex2f(v.P.X, v.P.Y)
-				}
-			} else {
-				lastColor := draw.Color{0, 0, 0, 0}
-				for _, vi := range indices[:cmd.Count] {
-					v := vertices[int(vi)]
-					if lastColor != v.Color {
-						gl.Color4ub(v.Color.R, v.Color.G, v.Color.B, v.Color.A)
-						lastColor = v.Color
-					}
-					gl.TexCoord2f(v.UV.X, v.UV.Y)
-					gl.Vertex2f(v.P.X, v.P.Y)
-				}
-			}
-			indices = indices[cmd.Count:]
+		render.List(&DrawList)
+		if err := gl.GetError(); err != 0 {
+			fmt.Println(err)
 		}
-		gl.End()
 
 		window.SwapBuffers()
 		glfw.PollEvents()

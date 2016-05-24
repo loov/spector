@@ -22,10 +22,10 @@ func (list *List) Primitive_Rect(r *Rectangle, color Color) {
 		base+0, base+2, base+3,
 	)
 	list.Vertices = append(list.Vertices,
-		Vertex{a, InvalidVector, color},
-		Vertex{b, InvalidVector, color},
-		Vertex{c, InvalidVector, color},
-		Vertex{d, InvalidVector, color},
+		Vertex{a, noUV, color},
+		Vertex{b, noUV, color},
+		Vertex{c, noUV, color},
+		Vertex{d, noUV, color},
 	)
 }
 
@@ -53,10 +53,10 @@ func (list *List) Primitive_Quad(a, b, c, d Vector, color Color) {
 		base+0, base+2, base+3,
 	)
 	list.Vertices = append(list.Vertices,
-		Vertex{a, InvalidVector, color},
-		Vertex{b, InvalidVector, color},
-		Vertex{c, InvalidVector, color},
-		Vertex{d, InvalidVector, color},
+		Vertex{a, noUV, color},
+		Vertex{b, noUV, color},
+		Vertex{c, noUV, color},
+		Vertex{d, noUV, color},
 	)
 }
 

@@ -1,5 +1,7 @@
 package draw
 
+var zeroClip = Rectangle{Vector{-8192, -8192}, Vector{+8192, +8192}}
+
 type List struct {
 	Commands []Command
 	Indicies []Index
@@ -16,7 +18,7 @@ func (list *List) Reset() {
 	list.Vertices = list.Vertices[:0]
 
 	list.CurrentCommand = nil
-	list.CurrentClip = Rectangle{InvalidVector, InvalidVector}
+	list.CurrentClip = zeroClip
 	list.CurrentTexture = 0
 }
 

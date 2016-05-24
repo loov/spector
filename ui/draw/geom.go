@@ -3,11 +3,13 @@ package draw
 import "math"
 
 var (
-	nan32         = math.Float32frombits(0x7FBFFFFF)
-	InvalidVector = Vector{nan32, nan32}
+	nan32 = math.Float32frombits(0x7FBFFFFF)
+	noUV  = Vector{nan32, nan32}
 )
 
-type Vector struct{ X, Y float32 }
+type Vector struct {
+	X, Y float32
+}
 
 func (a Vector) IsInvalid() bool { return a.X != a.X }
 
@@ -30,7 +32,11 @@ func (a Vector) Len2() float32 { return a.X*a.X + a.Y*a.Y }
 func (a Vector) Min(b Vector) Vector { return Vector{min(a.X, b.X), min(a.Y, b.Y)} }
 func (a Vector) Max(b Vector) Vector { return Vector{max(a.X, b.X), max(a.Y, b.Y)} }
 
-type Rectangle struct{ Min, Max Vector }
+type Rectangle struct {
+	Min, Max Vector
+}
+
+func (r Rectangle) IsInvalid() bool { return r.Min.X != r.Min.X }
 
 func (r *Rectangle) Corners() (tl, tr, br, bl Vector) {
 	tl = r.TopLeft()
@@ -103,6 +109,14 @@ func (r *Rectangle) Floor() {
 	r.Min.Y = (float32)((int)(r.Min.Y))
 	r.Max.X = (float32)((int)(r.Max.X))
 	r.Max.Y = (float32)((int)(r.Max.Y))
+}
+
+func (r *Rectangle) AsInt32() (x, y, w, h int32) {
+	x = int32(r.Min.X)
+	y = int32(r.Min.Y)
+	w = int32(r.Max.X - r.Min.X)
+	h = int32(r.Max.Y - r.Min.Y)
+	return
 }
 
 func (r *Rectangle) ClosestPoint(p Vector) Vector {
