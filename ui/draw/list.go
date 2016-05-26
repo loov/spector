@@ -13,9 +13,9 @@ type List struct {
 }
 
 func (list *List) Reset() {
-	list.Commands = list.Commands[:0]
-	list.Indicies = list.Indicies[:0]
-	list.Vertices = list.Vertices[:0]
+	list.Commands = list.Commands[:0:cap(list.Commands)]
+	list.Indicies = list.Indicies[:0:cap(list.Indicies)]
+	list.Vertices = list.Vertices[:0:cap(list.Vertices)]
 
 	list.CurrentCommand = nil
 	list.CurrentClip = zeroClip

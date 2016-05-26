@@ -11,6 +11,8 @@ import (
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
 
+	"github.com/egonelbre/exp/qpc"
+
 	"github.com/egonelbre/spector/ui/draw"
 	"github.com/egonelbre/spector/ui/draw/render-gl21"
 
@@ -63,6 +65,8 @@ func main() {
 		now := float64(time.Now().UnixNano()) / 1e9
 		width, height := window.GetSize()
 
+		start := qpc.Now()
+
 		{ // reset window
 			gl.MatrixMode(gl.MODELVIEW)
 			gl.LoadIdentity()
@@ -81,19 +85,19 @@ func main() {
 			draw.Vector{50, 50},
 		}, draw.Red)
 
-		const LineCount = 16
-		var line [LineCount]draw.Vector
+		LineCount := int(width / 2)
+		line := make([]draw.Vector, LineCount)
 		for i := range line {
-			r := float64(i) / LineCount
+			r := float64(i) / float64(LineCount-1)
 			line[i].X = float32(r) * float32(width)
 			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now*3)*100)
 		}
 		DrawList.AddLine(line[:], false, 10.0, draw.Blue)
 
-		const CircleCount = 32
-		var circle [CircleCount]draw.Vector
+		CircleCount := int(width / 2)
+		circle := make([]draw.Vector, CircleCount)
 		for i := range circle {
-			p := float64(i) / CircleCount
+			p := float64(i) / float64(CircleCount)
 			a := now + p*math.Pi*2
 			w := math.Sin(p*62)*20.0 + 100.0
 			circle[i].X = float32(width)*0.5 + float32(math.Cos(a)*w)
@@ -105,6 +109,16 @@ func main() {
 		if err := gl.GetError(); err != 0 {
 			fmt.Println(err)
 		}
+
+		stop := qpc.Now()
+
+		gcstart := qpc.Now()
+		runtime.GC()
+		gcstop := qpc.Now()
+
+		fmt.Printf("%-10.3f   %-10.3f\n",
+			stop.Sub(start).Duration().Seconds()*1000,
+			gcstop.Sub(gcstart).Duration().Seconds()*1000)
 
 		window.SwapBuffers()
 		glfw.PollEvents()
