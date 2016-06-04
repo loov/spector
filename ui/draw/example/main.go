@@ -29,6 +29,13 @@ func main() {
 		http.ListenAndServe("localhost:6060", nil)
 	}()
 
+	go func() {
+		for {
+			runtime.GC()
+			time.Sleep(1)
+		}
+	}()
+
 	if err := glfw.Init(); err != nil {
 		log.Fatalln("failed to initialize glfw:", err)
 	}
@@ -58,14 +65,13 @@ func main() {
 
 	var DrawList draw.List
 	for !window.ShouldClose() {
+		start := qpc.Now()
 		if window.GetKey(glfw.KeyEscape) == glfw.Press {
 			return
 		}
 
 		now := float64(time.Now().UnixNano()) / 1e9
 		width, height := window.GetSize()
-
-		start := qpc.Now()
 
 		{ // reset window
 			gl.MatrixMode(gl.MODELVIEW)
@@ -92,6 +98,7 @@ func main() {
 			line[i].X = float32(r) * float32(width)
 			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now*3)*100)
 		}
+		DrawList.BeginCommand()
 		DrawList.AddLine(line[:], false, 10.0, draw.Blue)
 
 		CircleCount := int(width / 2)
@@ -103,24 +110,21 @@ func main() {
 			circle[i].X = float32(width)*0.5 + float32(math.Cos(a)*w)
 			circle[i].Y = float32(height)*0.5 + float32(math.Sin(a)*w)
 		}
+
+		DrawList.BeginCommand()
 		DrawList.AddLine(circle[:], true, 10.0, draw.Green)
 
 		render.List(&DrawList)
 		if err := gl.GetError(); err != 0 {
 			fmt.Println(err)
 		}
-
 		stop := qpc.Now()
 
-		gcstart := qpc.Now()
-		runtime.GC()
-		gcstop := qpc.Now()
-
-		fmt.Printf("%-10.3f   %-10.3f\n",
-			stop.Sub(start).Duration().Seconds()*1000,
-			gcstop.Sub(gcstart).Duration().Seconds()*1000)
-
 		window.SwapBuffers()
+		runtime.GC()
 		glfw.PollEvents()
+
+		fmt.Printf("%-10.3f\n", stop.Sub(start).Duration().Seconds()*1000)
 	}
+
 }
