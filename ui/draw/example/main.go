@@ -43,6 +43,7 @@ func main() {
 
 	glfw.WindowHint(glfw.Resizable, glfw.True)
 	glfw.WindowHint(glfw.Visible, glfw.False) // do not steal focus
+	glfw.WindowHint(glfw.Samples, 4)
 
 	glfw.WindowHint(glfw.ContextVersionMajor, 2)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
@@ -63,7 +64,7 @@ func main() {
 		fmt.Println("INIT", err)
 	}
 
-	var DrawList draw.List
+	DrawList := draw.NewList()
 	for !window.ShouldClose() {
 		start := qpc.Now()
 		if window.GetKey(glfw.KeyEscape) == glfw.Press {
@@ -84,8 +85,6 @@ func main() {
 		}
 
 		DrawList.Reset()
-
-		DrawList.BeginCommand()
 		DrawList.AddRectFill(&draw.Rectangle{
 			draw.Vector{10, 10},
 			draw.Vector{50, 50},
@@ -98,7 +97,7 @@ func main() {
 			line[i].X = float32(r) * float32(width)
 			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now*3)*100)
 		}
-		DrawList.BeginCommand()
+
 		DrawList.AddLine(line[:], false, 10.0, draw.Blue)
 
 		CircleCount := int(width / 2)
@@ -111,10 +110,11 @@ func main() {
 			circle[i].Y = float32(height)*0.5 + float32(math.Sin(a)*w)
 		}
 
-		DrawList.BeginCommand()
+		DrawList.PushClip(draw.Rect(0, 0, float32(width)/2, float32(height)/2))
 		DrawList.AddLine(circle[:], true, 10.0, draw.Green)
+		DrawList.PopClip()
 
-		render.List(&DrawList)
+		render.List(width, height, DrawList)
 		if err := gl.GetError(); err != 0 {
 			fmt.Println(err)
 		}

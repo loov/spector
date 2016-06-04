@@ -10,6 +10,61 @@ type List struct {
 	CurrentCommand *Command
 	CurrentClip    Rectangle
 	CurrentTexture TextureID
+
+	ClipStack    []Rectangle
+	TextureStack []TextureID
+}
+
+func NewList() *List {
+	list := &List{}
+	list.Reset()
+	return list
+}
+
+func (list *List) PushClip(clip Rectangle) {
+	list.ClipStack = append(list.ClipStack, list.CurrentClip)
+	list.CurrentClip = clip
+	list.updateClip()
+}
+
+func (list *List) PushClipFullscreen() { list.PushClip(zeroClip) }
+
+func (list *List) PopClip() {
+	n := len(list.ClipStack)
+	list.CurrentClip = list.ClipStack[n-1]
+	list.ClipStack = list.ClipStack[:n-1]
+	list.updateClip()
+}
+
+func (list *List) updateClip() {
+	if list.CurrentCommand == nil ||
+		list.CurrentCommand.Clip != list.CurrentClip {
+		list.BeginCommand()
+		return
+	}
+	list.CurrentCommand.Clip = list.CurrentClip
+}
+
+func (list *List) PushTexture(id TextureID) {
+	list.TextureStack = append(list.TextureStack, list.CurrentTexture)
+	list.CurrentTexture = id
+	list.updateTexture()
+}
+
+func (list *List) PopTexture() {
+	n := len(list.TextureStack)
+	list.CurrentTexture = list.TextureStack[n-1]
+	list.TextureStack = list.TextureStack[:n-1]
+	list.updateTexture()
+}
+
+func (list *List) updateTexture() {
+	if list.CurrentCommand == nil ||
+		list.CurrentCommand.Texture != list.CurrentTexture {
+		list.BeginCommand()
+		return
+	}
+	list.CurrentCommand.Texture = list.CurrentTexture
 }
 
 func (list *List) Reset() {
@@ -20,11 +75,11 @@ func (list *List) Reset() {
 	list.CurrentCommand = nil
 	list.CurrentClip = zeroClip
 	list.CurrentTexture = 0
-}
 
-type Channel struct {
-	Commands []Command
-	Indicies []Index
+	list.ClipStack = nil
+	list.TextureStack = nil
+
+	list.BeginCommand()
 }
 
 type TextureID int32

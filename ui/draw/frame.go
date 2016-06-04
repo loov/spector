@@ -2,5 +2,9 @@ package draw
 
 type Frame struct {
 	Valid bool
-	Lists []*List
+
+	Text     *List
+	Hint     *List
+	Geometry *List
+	Shadow   *List
 }

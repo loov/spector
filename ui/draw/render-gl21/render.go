@@ -27,7 +27,7 @@ func init() {
 	}
 }
 
-func List(list *draw.List) {
+func List(width, height int, list *draw.List) {
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
@@ -49,13 +49,18 @@ func List(list *draw.List) {
 
 	offset := 0
 	for _, cmd := range list.Commands {
+		if cmd.Count == 0 {
+			continue
+		}
 		if cmd.Texture == 0 {
 			gl.Disable(gl.TEXTURE_2D)
 		} else {
 			gl.Enable(gl.TEXTURE_2D)
 			gl.BindTexture(gl.TEXTURE_2D, uint32(cmd.Texture))
 		}
-		gl.Scissor(cmd.Clip.AsInt32())
+
+		x, y, w, h := cmd.Clip.AsInt32()
+		gl.Scissor(x, int32(height)-y-h, w, h)
 		gl.DrawElements(gl.TRIANGLES, int32(cmd.Count), indexType, gl.Ptr(list.Indicies[offset:]))
 		offset += int(cmd.Count)
 	}

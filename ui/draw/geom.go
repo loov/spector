@@ -36,6 +36,10 @@ type Rectangle struct {
 	Min, Max Vector
 }
 
+func Rect(x, y, w, h float32) Rectangle {
+	return Rectangle{Min: Vector{x, y}, Max: Vector{x + w, y + h}}
+}
+
 func (r Rectangle) IsInvalid() bool { return r.Min.X != r.Min.X }
 
 func (r *Rectangle) Corners() (tl, tr, br, bl Vector) {
