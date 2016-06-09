@@ -60,6 +60,18 @@ func (list *List) Primitive_Quad(a, b, c, d Vector, color Color) {
 	)
 }
 
+func (list *List) Primitive_Tri(a, b, c Vector, color Color) {
+	base := Index(len(list.Vertices))
+	list.Indicies = append(list.Indicies,
+		base+0, base+1, base+2,
+	)
+	list.Vertices = append(list.Vertices,
+		Vertex{a, noUV, color},
+		Vertex{b, noUV, color},
+		Vertex{c, noUV, color},
+	)
+}
+
 func (list *List) Primitive_QuadUV(q *[4]Vector, uv *Rectangle, color Color) {
 	a, b, c, d := q[0], q[1], q[2], q[3]
 	uv_a, uv_b, uv_c, uv_d := uv.Corners()
@@ -77,81 +89,106 @@ func (list *List) Primitive_QuadUV(q *[4]Vector, uv *Rectangle, color Color) {
 	)
 }
 
-func linenormal(a, b Vector, size float32) Vector {
-	d := b.Sub(a)
-	n := Vector{-d.Y, d.X}
-	return n.ScaleTo(size)
-}
-
-func (list *List) AddLine(points []Vector, closed bool, thickness float32, color Color) {
-	if len(points) < 2 || color.Transparent() {
+func (list *List) AddLine(points []Vector, thickness float32, color Color) {
+	if len(points) < 2 || color.Transparent() || thickness == 0 {
 		return
 	}
-	if closed && len(points) < 3 {
-		closed = false
+
+	startIndexCount := len(list.Indicies)
+
+	R := thickness / 2.0
+	if R < 0 {
+		R = -R
 	}
 
-	if !closed {
-		qthick := thickness * 0.25
+	a := points[0]
+	var x1, x2, xn Vector
 
-		list.Primitive_Reserve(
-			(len(points)-1)*6,
-			(len(points)-1)*4,
-		)
+	// draw each segment, where
+	// a1-------^---------b1
+	// |        | abn      |
+	// a - - - - - - - - - b
+	// |                   |
+	// a2-----------------b2
+	// x1, x2, xn are the previous segments end corners and normal
+	for i, b := range points[1:] {
+		// segment normal
+		abn := SegmentNormal(a, b).ScaleTo(R)
+		// segment corners
+		a1, a2 := a.Add(abn), a.Sub(abn)
+		b1, b2 := b.Add(abn), b.Sub(abn)
 
-		a, b := points[0], points[1]
-		abn := linenormal(a, b, qthick)
-		a1, a2 := a.Add(abn.Scale(2.0)), a.Sub(abn.Scale(2.0))
-		for _, c := range points[2:] {
-			bcn := linenormal(b, c, qthick)
+		if i > 0 && R > 1.5 {
+			// draw segment chamfer
+			d := xn.Rotate().Dot(abn)
+			if d < 0 {
+				list.Primitive_Tri(x1, a1, a, color)
+			} else if d > 0 {
+				list.Primitive_Tri(x2, a2, a, color)
 
-			z := abn.Add(bcn)
-			b1, b2 := b.Add(z), b.Sub(z)
-
-			list.Primitive_Quad(a1, b1, b2, a2, color)
-
-			abn = bcn
-			a, b = b, c
-			a1, a2 = b1, b2
+			}
 		}
-
-		b1, b2 := b.Add(abn.Scale(2.0)), b.Sub(abn.Scale(2.0))
+		// draw block segment
 		list.Primitive_Quad(a1, b1, b2, a2, color)
-	} else {
-		qthick := thickness * 0.25
 
-		const X = 0
-		list.Primitive_Reserve(
-			(len(points)-X)*6,
-			(len(points)-X)*4,
-		)
+		a = b
+		x1, x2, xn = b1, b2, abn
+	}
 
-		w := points[len(points)-3]
-		a, b := points[len(points)-2], points[len(points)-1]
-		wan := linenormal(w, a, qthick)
-		abn := linenormal(a, b, qthick)
-		z := wan.Add(abn)
-		a1, a2 := a.Add(z), a.Sub(z)
-		for _, c := range points[:len(points)-X] {
-			bcn := linenormal(b, c, qthick)
+	list.CurrentCommand.Count += Index(len(list.Indicies) - startIndexCount)
+}
 
-			z := abn.Add(bcn)
-			b1, b2 := b.Add(z), b.Sub(z)
+func (list *List) AddClosedLine(points []Vector, thickness float32, color Color) {
+	if len(points) < 2 || color.Transparent() || thickness == 0 {
+		return
+	}
+	if len(points) < 3 {
+		list.AddLine(points, thickness, color)
+		return
+	}
 
-			list.Primitive_Quad(a1, b1, b2, a2, color)
+	startIndexCount := len(list.Indicies)
 
-			abn = bcn
-			a, b = b, c
-			a1, a2 = b1, b2
+	R := thickness / 2.0
+	if R < 0 {
+		R = -R
+	}
+	a := points[len(points)-1]
+	xn := SegmentNormal(points[len(points)-2], a).ScaleTo(R)
+	x1, x2 := a.Add(xn), a.Sub(xn)
+
+	// draw each segment, where
+	// a1-------^---------b1
+	// |        | abn      |
+	// a - - - - - - - - - b
+	// |                   |
+	// a2-----------------b2
+	// x1, x2, xn are the previous segments end corners and normal
+	for _, b := range points {
+		// segment normal
+		abn := SegmentNormal(a, b).ScaleTo(R)
+		// segment corners
+		a1, a2 := a.Add(abn), a.Sub(abn)
+		b1, b2 := b.Add(abn), b.Sub(abn)
+
+		// draw segment chamfer
+		if R > 1.5 {
+			d := xn.Rotate().Dot(abn)
+			if d < 0 {
+				list.Primitive_Tri(x1, a1, a, color)
+			} else if d > 0 {
+				list.Primitive_Tri(x2, a2, a, color)
+			}
 		}
 
-		/*		c := points[0]
-				bcn := linenormal(b, c, qthick)
-				z = abn.Add(bcn)
-				b1, b2 := b.Add(z), b.Sub(z)
+		// draw block segment
+		list.Primitive_Quad(a1, b1, b2, a2, color)
 
-				list.Primitive_Quad(a1, b1, b2, a2, color)*/
+		a = b
+		x1, x2, xn = b1, b2, abn
 	}
+
+	list.CurrentCommand.Count += Index(len(list.Indicies) - startIndexCount)
 }
 
 func (list *List) AddRectFill(r *Rectangle, color Color) {

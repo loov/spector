@@ -17,6 +17,8 @@ func (a Vector) Add(b Vector) Vector    { return Vector{a.X + b.X, a.Y + b.Y} }
 func (a Vector) Sub(b Vector) Vector    { return Vector{a.X - b.X, a.Y - b.Y} }
 func (a Vector) Scale(s float32) Vector { return Vector{a.X * s, a.Y * s} }
 func (a Vector) Div(s float32) Vector   { return Vector{a.X / s, a.Y / s} }
+func (a Vector) Dot(b Vector) float32   { return a.X*b.X + a.Y*b.Y }
+func (a Vector) Rotate() Vector         { return Vector{-a.Y, a.X} }
 
 func (a Vector) ScaleTo(size float32) Vector {
 	ilen := a.Len()
@@ -31,6 +33,10 @@ func (a Vector) Len2() float32 { return a.X*a.X + a.Y*a.Y }
 
 func (a Vector) Min(b Vector) Vector { return Vector{min(a.X, b.X), min(a.Y, b.Y)} }
 func (a Vector) Max(b Vector) Vector { return Vector{max(a.X, b.X), max(a.Y, b.Y)} }
+
+func SegmentNormal(a, b Vector) Vector {
+	return b.Sub(a).Rotate()
+}
 
 type Rectangle struct {
 	Min, Max Vector

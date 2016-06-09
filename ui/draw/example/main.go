@@ -90,17 +90,18 @@ func main() {
 			draw.Vector{50, 50},
 		}, draw.Red)
 
-		LineCount := int(width / 2)
+		LineWidth := float32(math.Sin(now*2.1)*5 + 5)
+
+		LineCount := int(width / 8)
 		line := make([]draw.Vector, LineCount)
 		for i := range line {
 			r := float64(i) / float64(LineCount-1)
 			line[i].X = float32(r) * float32(width)
-			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now*3)*100)
+			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now)*100)
 		}
+		DrawList.AddLine(line[:], LineWidth, draw.Blue)
 
-		DrawList.AddLine(line[:], false, 10.0, draw.Blue)
-
-		CircleCount := int(width / 2)
+		CircleCount := int(width / 8)
 		circle := make([]draw.Vector, CircleCount)
 		for i := range circle {
 			p := float64(i) / float64(CircleCount)
@@ -110,9 +111,9 @@ func main() {
 			circle[i].Y = float32(height)*0.5 + float32(math.Sin(a)*w)
 		}
 
-		DrawList.PushClip(draw.Rect(0, 0, float32(width)/2, float32(height)/2))
-		DrawList.AddLine(circle[:], true, 10.0, draw.Green)
-		DrawList.PopClip()
+		// DrawList.PushClip(draw.Rect(0, 0, float32(width)/2, float32(height)/2))
+		DrawList.AddClosedLine(circle[:], LineWidth, draw.Green)
+		// DrawList.PopClip()
 
 		render.List(width, height, DrawList)
 		if err := gl.GetError(); err != 0 {
