@@ -96,10 +96,7 @@ func (list *List) AddLine(points []Vector, thickness float32, color Color) {
 
 	startIndexCount := len(list.Indicies)
 
-	R := thickness / 2.0
-	if R < 0 {
-		R = -R
-	}
+	R := abs(thickness / 2.0)
 
 	a := points[0]
 	var x1, x2, xn Vector
@@ -149,10 +146,7 @@ func (list *List) AddClosedLine(points []Vector, thickness float32, color Color)
 
 	startIndexCount := len(list.Indicies)
 
-	R := thickness / 2.0
-	if R < 0 {
-		R = -R
-	}
+	R := abs(thickness / 2.0)
 	a := points[len(points)-1]
 	xn := SegmentNormal(points[len(points)-2], a).ScaleTo(R)
 	x1, x2 := a.Add(xn), a.Sub(xn)
@@ -198,4 +192,71 @@ func (list *List) AddRectFill(r *Rectangle, color Color) {
 
 	list.Primitive_Reserve(6, 4)
 	list.Primitive_Rect(r, color)
+}
+
+const segmentsPerArc = 24
+
+func (list *List) AddArc(center Vector, R float32, start, sweep float32, color Color) {
+	if color.Transparent() || R == 0 {
+		return
+	}
+	R = abs(R)
+	startIndexCount := len(list.Indicies)
+
+	// N := sweep * R gives one segment per pixel
+	N := Index(clamp(abs(sweep)*R/(2*pi), 3, segmentsPerArc))
+
+	theta := sweep / float32(N)
+	rotc, rots := cos(theta), sin(theta)
+
+	dx, dy := cos(start)*R, sin(start)*R
+
+	// add center point to the vertex buffer
+	base := Index(len(list.Vertices))
+	list.Vertices = append(list.Vertices, Vertex{center, noUV, color})
+	// add the first point the vertex buffer
+	p := Vector{center.X + dx, center.Y + dy}
+	list.Vertices = append(list.Vertices, Vertex{p, noUV, color})
+	// loop over rest of the points
+	for i := Index(0); i < N; i++ {
+		dx, dy = dx*rotc-dy*rots, dx*rots+dy*rotc
+		p = Vector{center.X + dx, center.Y + dy}
+		list.Vertices = append(list.Vertices, Vertex{p, noUV, color})
+		list.Indicies = append(list.Indicies, base, base+i+1, base+i+2)
+	}
+
+	list.CurrentCommand.Count += Index(len(list.Indicies) - startIndexCount)
+}
+
+func (list *List) AddCircle(center Vector, R float32, color Color) {
+	if color.Transparent() || R == 0 {
+		return
+	}
+	R = abs(R)
+	startIndexCount := len(list.Indicies)
+
+	// N := 2 * PI * R gives one segment per pixel
+	N := Index(clamp(R, 3, segmentsPerArc))
+
+	theta := 2 * pi / float32(N)
+	rotc, rots := cos(theta), sin(theta)
+
+	dx, dy := R, float32(0)
+
+	// add center point to the vertex buffer
+	base := Index(len(list.Vertices))
+	list.Vertices = append(list.Vertices, Vertex{center, noUV, color})
+	// add the first point the vertex buffer
+	p := Vector{center.X + dx, center.Y + dy}
+	list.Vertices = append(list.Vertices, Vertex{p, noUV, color})
+
+	// loop over rest of the points
+	for i := Index(0); i < N; i++ {
+		dx, dy = dx*rotc-dy*rots, dx*rots+dy*rotc
+		p = Vector{center.X + dx, center.Y + dy}
+		list.Vertices = append(list.Vertices, Vertex{p, noUV, color})
+		list.Indicies = append(list.Indicies, base, base+i+1, base+i+2)
+	}
+
+	list.CurrentCommand.Count += Index(len(list.Indicies) - startIndexCount)
 }

@@ -64,6 +64,8 @@ func main() {
 		fmt.Println("INIT", err)
 	}
 
+	startnano := time.Now().UnixNano()
+
 	DrawList := draw.NewList()
 	for !window.ShouldClose() {
 		start := qpc.Now()
@@ -71,7 +73,7 @@ func main() {
 			return
 		}
 
-		now := float64(time.Now().UnixNano()) / 1e9
+		now := float64(time.Now().UnixNano()-startnano) / 1e9
 		width, height := window.GetSize()
 
 		{ // reset window
@@ -85,10 +87,19 @@ func main() {
 		}
 
 		DrawList.Reset()
+
 		DrawList.AddRectFill(&draw.Rectangle{
 			draw.Vector{10, 10},
 			draw.Vector{50, 50},
 		}, draw.Red)
+
+		CircleRadius := float32(50.0 * math.Sin(now*1.3))
+		DrawList.AddCircle(
+			draw.Vector{100, 100}, CircleRadius, draw.Red)
+		DrawList.AddArc(
+			draw.Vector{200, 100}, CircleRadius/2+50,
+			float32(now),
+			float32(math.Sin(now)*10), draw.Blue)
 
 		LineWidth := float32(math.Sin(now*2.1)*5 + 5)
 
