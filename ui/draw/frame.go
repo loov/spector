@@ -16,7 +16,7 @@ func (frame *Frame) Next() bool {
 	return true
 }
 
-func (frame *Frame) NewList() *List {
+func (frame *Frame) Layer() *List {
 	var list *List
 
 	if len(frame.lists) > 0 {

@@ -99,7 +99,8 @@ func main() {
 		DrawList.AddArc(
 			draw.Vector{200, 100}, CircleRadius/2+50,
 			float32(now),
-			float32(math.Sin(now)*10), draw.Blue)
+			float32(math.Sin(now)*10),
+			draw.ColorHSL(float32(math.Sin(now*0.3)), 0.8, 0.5))
 
 		LineWidth := float32(math.Sin(now*2.1)*5 + 5)
 
@@ -110,7 +111,8 @@ func main() {
 			line[i].X = float32(r) * float32(width)
 			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now)*100)
 		}
-		DrawList.AddLine(line[:], LineWidth, draw.Blue)
+		DrawList.AddLine(line[:], LineWidth,
+			draw.ColorHSL(float32(math.Sin(now*0.3)), 0.6, 0.6))
 
 		CircleCount := int(width / 8)
 		circle := make([]draw.Vector, CircleCount)
