@@ -14,6 +14,8 @@ import (
 	"github.com/egonelbre/spector/ui"
 )
 
+var Highlight = ui.Color{0xff, 0, 0xff, 0xff}
+
 type State struct {
 	Timeline timeline.Timeline
 	Handler  timeline.Handler
@@ -84,6 +86,9 @@ func (state *State) Render(window *glfw.Window) {
 	state.Reset(window)
 	state.Time = time.Now()
 	state.UpdateInput(window)
+
+	hue := float32(state.Time.UnixNano()/1e6%360) / 360.0
+	Highlight = ui.ColorHSLA(hue, 0.7, 0.7, 1.0)
 
 	w, h := window.GetSize()
 	root := &ui.Context{
@@ -242,13 +247,12 @@ func (view *View) Block(id trace.ID, start, stop trace.Time, height float32) {
 
 	view.Pad(2)
 	block := ui.Block(x0, view.Y, x1-x0, height)
-	if view.State.Input.Mouse.PointsAt(block) {
-		hue := float32((view.State.Time.UnixNano()/1e7)%360) / 360.0
-		view.Context.SetBack(ui.ColorHSLA(hue, 0.6, 0.6, 1))
-	} else {
-		view.Context.SetBack(IDColor(id))
-	}
+	view.Context.SetBack(IDColor(id))
 	view.Context.Backend.Fill(block)
+	if view.State.Input.Mouse.PointsAt(block) {
+		view.Context.Backend.SetFore(Highlight)
+		view.Context.Backend.Stroke(block)
+	}
 }
 
 func (view *View) Spans(proc *timeline.Proc, layer *timeline.Layer, depth, height float32) {
@@ -276,7 +280,12 @@ func (view *View) Spans(proc *timeline.Proc, layer *timeline.Layer, depth, heigh
 
 		x0 := view.TimeToPx(join.Start)
 		x1 := view.TimeToPx(min(join.Stop, proc.Time))
-		view.Context.Backend.Fill(ui.Block(x0, view.Y, x1-x0, height))
+		block := ui.Block(x0, view.Y, x1-x0, height)
+		view.Context.Backend.Fill(block)
+		if view.State.Input.Mouse.PointsAt(block) {
+			view.Context.Backend.SetFore(Highlight)
+			view.Context.Backend.Stroke(block)
+		}
 	}
 	view.Y += height
 }
