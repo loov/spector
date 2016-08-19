@@ -85,9 +85,9 @@ func (state *State) Render(window *glfw.Window) {
 	mm := &MainMenu{}
 	ui.Buttons{
 		{"☺", mm.File},
-		{"Load", nil},
-		{"Save", nil},
-		{"Quit", nil},
+		{"Load", mm.Load},
+		{"Save", mm.Save},
+		{"Quit", mm.Quit},
 	}.DoDynamic(ui.LayoutToRight(50, root.Top(20).Panel()))
 
 	boxbounds := ui.Bounds{
@@ -115,14 +115,7 @@ func (state *State) Render(window *glfw.Window) {
 
 type MainMenu struct{}
 
-func (menu *MainMenu) File() {
-	log.Println("File Pressed")
-}
-
-func (menu *MainMenu) Edit() {
-	log.Println("Edit Pressed")
-}
-
-func (menu *MainMenu) Help() {
-	log.Println("Help Pressed")
-}
+func (menu *MainMenu) File() { log.Println("File Pressed") }
+func (menu *MainMenu) Load() { log.Println("Load Pressed") }
+func (menu *MainMenu) Save() { log.Println("Save Pressed") }
+func (menu *MainMenu) Quit() { log.Println("Quit Pressed") }

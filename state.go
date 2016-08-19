@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -18,6 +19,7 @@ type State struct {
 	Handler  timeline.Handler
 
 	Backend ui.Backend
+	Time    time.Time
 	Input   *ui.Input
 
 	Simulator *simulator.Stream
@@ -33,6 +35,7 @@ func NewState() *State {
 	state.Dirty = true
 
 	state.Backend = ui.NewGLBackend()
+	state.Time = time.Now()
 	state.Input = &ui.Input{}
 
 	return state
@@ -79,6 +82,7 @@ func (state *State) Render(window *glfw.Window) {
 	state.Dirty = false
 
 	state.Reset(window)
+	state.Time = time.Now()
 	state.UpdateInput(window)
 
 	w, h := window.GetSize()
@@ -98,7 +102,7 @@ func (state *State) Render(window *glfw.Window) {
 	state.Backend.SetFore(ui.ColorHex(0xCCCCCCFF))
 	state.Backend.SetFontColor(ui.ColorHex(0x000000FF))
 
-	view := NewView(root, &state.Timeline)
+	view := NewView(state, root, &state.Timeline)
 	view.Render()
 }
 
@@ -110,6 +114,7 @@ type Camera struct {
 }
 
 type View struct {
+	State    *State
 	Context  *ui.Context
 	Timeline *timeline.Timeline
 
@@ -120,8 +125,9 @@ type View struct {
 	Target Camera
 }
 
-func NewView(context *ui.Context, timeline *timeline.Timeline) *View {
+func NewView(state *State, context *ui.Context, timeline *timeline.Timeline) *View {
 	ui := &View{}
+	ui.State = state
 	ui.Timeline = timeline
 	ui.Context = context
 	ui.Size = context.Area.Size()
@@ -235,8 +241,14 @@ func (view *View) Block(id trace.ID, start, stop trace.Time, height float32) {
 	x0, x1 := view.TimeToPx(start), view.TimeToPx(stop)
 
 	view.Pad(2)
-	view.Context.SetBack(IDColor(id))
-	view.Context.Backend.Fill(ui.Block(x0, view.Y, x1-x0, height))
+	block := ui.Block(x0, view.Y, x1-x0, height)
+	if view.State.Input.Mouse.PointsAt(block) {
+		hue := float32((view.State.Time.UnixNano()/1e7)%360) / 360.0
+		view.Context.SetBack(ui.ColorHSLA(hue, 0.6, 0.6, 1))
+	} else {
+		view.Context.SetBack(IDColor(id))
+	}
+	view.Context.Backend.Fill(block)
 }
 
 func (view *View) Spans(proc *timeline.Proc, layer *timeline.Layer, depth, height float32) {
