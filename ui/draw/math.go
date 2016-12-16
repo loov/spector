@@ -36,7 +36,6 @@ func abs(x float32) float32 {
 	return x
 }
 
-//TODO: optimize
 func cos(x float32) float32 { return float32(math.Cos(float64(x))) }
 func sin(x float32) float32 { return float32(math.Sin(float64(x))) }
 

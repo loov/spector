@@ -21,6 +21,21 @@ func NewList() *List {
 	return list
 }
 
+func (list *List) Reset() {
+	list.Commands = list.Commands[:0:cap(list.Commands)]
+	list.Indicies = list.Indicies[:0:cap(list.Indicies)]
+	list.Vertices = list.Vertices[:0:cap(list.Vertices)]
+
+	list.CurrentCommand = nil
+	list.CurrentClip = zeroClip
+	list.CurrentTexture = 0
+
+	list.ClipStack = nil
+	list.TextureStack = nil
+
+	list.BeginCommand()
+}
+
 func (list *List) PushClip(clip Rectangle) {
 	list.ClipStack = append(list.ClipStack, list.CurrentClip)
 	list.CurrentClip = clip
@@ -65,21 +80,6 @@ func (list *List) updateTexture() {
 		return
 	}
 	list.CurrentCommand.Texture = list.CurrentTexture
-}
-
-func (list *List) Reset() {
-	list.Commands = list.Commands[:0:cap(list.Commands)]
-	list.Indicies = list.Indicies[:0:cap(list.Indicies)]
-	list.Vertices = list.Vertices[:0:cap(list.Vertices)]
-
-	list.CurrentCommand = nil
-	list.CurrentClip = zeroClip
-	list.CurrentTexture = 0
-
-	list.ClipStack = nil
-	list.TextureStack = nil
-
-	list.BeginCommand()
 }
 
 type TextureID int32
