@@ -1,6 +1,6 @@
 package draw
 
-import "github.com/egonelbre/spector/ui/g"
+var zeroClip = Rectangle{Vector{-8192, -8192}, Vector{+8192, +8192}}
 
 type List struct {
 	Commands []Command
@@ -8,10 +8,10 @@ type List struct {
 	Vertices []Vertex
 
 	CurrentCommand *Command
-	CurrentClip    g.Rect
+	CurrentClip    Rectangle
 	CurrentTexture TextureID
 
-	ClipStack    []g.Rect
+	ClipStack    []Rectangle
 	TextureStack []TextureID
 }
 
@@ -27,7 +27,7 @@ func (list *List) Reset() {
 	list.Vertices = list.Vertices[:0:cap(list.Vertices)]
 
 	list.CurrentCommand = nil
-	list.CurrentClip = noClip
+	list.CurrentClip = zeroClip
 	list.CurrentTexture = 0
 
 	list.ClipStack = nil
@@ -36,13 +36,13 @@ func (list *List) Reset() {
 	list.BeginCommand()
 }
 
-func (list *List) PushClip(clip g.Rect) {
+func (list *List) PushClip(clip Rectangle) {
 	list.ClipStack = append(list.ClipStack, list.CurrentClip)
 	list.CurrentClip = clip
 	list.updateClip()
 }
 
-func (list *List) PushClipFullscreen() { list.PushClip(noClip) }
+func (list *List) PushClipFullscreen() { list.PushClip(zeroClip) }
 
 func (list *List) PopClip() {
 	n := len(list.ClipStack)
@@ -87,7 +87,7 @@ type Callback func(*List, *Command)
 
 type Command struct {
 	Count    Index
-	Clip     g.Rect
+	Clip     Rectangle
 	Texture  TextureID
 	Callback Callback
 	Data     interface{}
@@ -96,7 +96,7 @@ type Command struct {
 type Index uint16
 
 type Vertex struct {
-	P     g.Vector
-	UV    g.Vector
-	Color g.Color
+	P     Vector
+	UV    Vector
+	Color Color
 }

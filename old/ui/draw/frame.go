@@ -1,9 +1,7 @@
 package draw
 
-import "github.com/egonelbre/spector/ui/g"
-
 type Frame struct {
-	Size  g.Vector
+	Size  Vector
 	Lists []*List
 	lists []*List
 }
