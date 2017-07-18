@@ -36,6 +36,10 @@ func (list *List) Reset() {
 	list.BeginCommand()
 }
 
+func (list *List) Empty() bool {
+	return (len(list.Commands) == 0) || (len(list.Vertices) == 0)
+}
+
 func (list *List) PushClip(clip g.Rect) {
 	list.ClipStack = append(list.ClipStack, list.CurrentClip)
 	list.CurrentClip = clip

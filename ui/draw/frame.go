@@ -1,9 +1,6 @@
 package draw
 
-import "github.com/egonelbre/spector/ui/g"
-
 type Frame struct {
-	Size  g.Vector
 	Lists []*List
 	lists []*List
 }
@@ -11,11 +8,6 @@ type Frame struct {
 func (frame *Frame) Reset() {
 	frame.lists = frame.Lists
 	frame.Lists = nil
-}
-
-func (frame *Frame) Next() bool {
-	frame.Reset()
-	return true
 }
 
 func (frame *Frame) Layer() *List {
@@ -28,6 +20,6 @@ func (frame *Frame) Layer() *List {
 		list = NewList()
 	}
 	list.Reset()
-	frame.Lists = append(frame.Lists)
+	frame.Lists = append(frame.Lists, list)
 	return list
 }

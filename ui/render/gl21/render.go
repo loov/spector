@@ -28,6 +28,10 @@ func init() {
 }
 
 func List(width, height int, list *draw.List) {
+	if list.Empty() {
+		return
+	}
+
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 

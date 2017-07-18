@@ -15,7 +15,7 @@ import (
 
 	"github.com/egonelbre/spector/ui/draw"
 	"github.com/egonelbre/spector/ui/g"
-	render "github.com/egonelbre/spector/ui/renderer/gl21"
+	render "github.com/egonelbre/spector/ui/render/gl21"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -67,7 +67,7 @@ func main() {
 
 	startnano := time.Now().UnixNano()
 
-	DrawList := draw.NewList()
+	drawlist := draw.NewList()
 	for !window.ShouldClose() {
 		start := qpc.Now()
 		if window.GetKey(glfw.KeyEscape) == glfw.Press {
@@ -87,17 +87,17 @@ func main() {
 			gl.Clear(gl.COLOR_BUFFER_BIT)
 		}
 
-		DrawList.Reset()
+		drawlist.Reset()
 
-		DrawList.AddRectFill(&g.Rect{
+		drawlist.AddRectFill(&g.Rect{
 			g.Vector{10, 10},
 			g.Vector{50, 50},
 		}, g.Red)
 
 		CircleRadius := float32(50.0 * math.Sin(now*1.3))
-		DrawList.AddCircle(
+		drawlist.AddCircle(
 			g.Vector{100, 100}, CircleRadius, g.Red)
-		DrawList.AddArc(
+		drawlist.AddArc(
 			g.Vector{200, 100}, CircleRadius/2+50,
 			float32(now),
 			float32(math.Sin(now)*10),
@@ -112,7 +112,7 @@ func main() {
 			line[i].X = float32(r) * float32(width)
 			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now)*100)
 		}
-		DrawList.AddLine(line[:], LineWidth,
+		drawlist.AddLine(line[:], LineWidth,
 			g.HSL(float32(math.Sin(now*0.3)), 0.6, 0.6))
 
 		CircleCount := int(width / 8)
@@ -125,11 +125,11 @@ func main() {
 			circle[i].Y = float32(height)*0.5 + float32(math.Sin(a)*w)
 		}
 
-		// DrawList.PushClip(g.Rect(0, 0, float32(width)/2, float32(height)/2))
-		DrawList.AddClosedLine(circle[:], LineWidth, g.Green)
-		// DrawList.PopClip()
+		// drawlist.PushClip(g.Rect(0, 0, float32(width)/2, float32(height)/2))
+		drawlist.AddClosedLine(circle[:], LineWidth, g.Green)
+		// drawlist.PopClip()
 
-		render.List(width, height, DrawList)
+		render.List(width, height, drawlist)
 		if err := gl.GetError(); err != 0 {
 			fmt.Println(err)
 		}
