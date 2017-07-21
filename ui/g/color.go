@@ -23,7 +23,7 @@ func RGBAHex(hex uint32) Color {
 }
 
 // RGBA returns color based on RGBA in range 0..1
-func RGBA(r, g, b, a float32) Color { return Color{sat8(r), sat8(g), sat8(b), sat8(a)} }
+func RGBA(r, g, b, a float32) Color { return Color{Sat8(r), Sat8(g), Sat8(b), Sat8(a)} }
 
 // HSLA returns color based on HSLA in range 0..1
 func HSLA(h, s, l, a float32) Color { return RGBA(hsla(h, s, l, a)) }
@@ -102,8 +102,8 @@ func hsla(h, s, l, a float32) (r, g, b, ra float32) {
 	return
 }
 
-// sat8 converts 0..1 float to 0..255 uint8
-func sat8(v float32) uint8 {
+// Sat8 converts 0..1 float to 0..255 uint8
+func Sat8(v float32) uint8 {
 	v *= 255.0
 	if v >= 255 {
 		return 255

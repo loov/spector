@@ -73,6 +73,12 @@ func (r Rect) TopRight() Vector    { return Vector{r.Max.X, r.Min.Y} }
 func (r Rect) BottomLeft() Vector  { return Vector{r.Min.X, r.Max.Y} }
 func (r Rect) BottomRight() Vector { return r.Max }
 
+func (r Rect) VerticalLine(x, radius float32) Rect {
+	r.Min.X = x - radius
+	r.Max.X = x + radius
+	return r
+}
+
 func SegmentNormal(a, b Vector) Vector {
 	return b.Sub(a).Rotate()
 }

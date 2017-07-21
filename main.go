@@ -86,19 +86,20 @@ func (app *App) Run() {
 
 func (app *App) UpdateFrame() {
 	w, h := app.Window.GetSize()
+	x, y := app.Window.GetCursorPos()
+
+	app.Context.Input.Mouse.Pos = g.Vector{float32(x), float32(y)}
+	app.Context.Input.Mouse.Down = app.Window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
+
 	app.Context.BeginFrame(g.Rect{
 		g.Vector{0, 0},
 		g.Vector{float32(w), float32(h)},
 	})
-	defer app.Context.EndFrame()
-
-	x, y := app.Window.GetCursorPos()
-	app.Context.Input.Mouse.Pos = g.Vector{float32(x), float32(y)}
-	app.Context.Input.Mouse.Down = app.Window.GetMouseButton(glfw.MouseButtonLeft) == glfw.Press
 
 	app.Context.Input.Time = time.Now()
 
 	app.RenderFrame()
+	app.Context.EndFrame()
 
 	{ // reset window
 		gl.MatrixMode(gl.MODELVIEW)
