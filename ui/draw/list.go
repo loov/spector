@@ -27,7 +27,7 @@ func (list *List) Reset() {
 	list.Vertices = list.Vertices[:0:cap(list.Vertices)]
 
 	list.CurrentCommand = nil
-	list.CurrentClip = noClip
+	list.CurrentClip = NoClip
 	list.CurrentTexture = 0
 
 	list.ClipStack = nil
@@ -46,7 +46,7 @@ func (list *List) PushClip(clip g.Rect) {
 	list.updateClip()
 }
 
-func (list *List) PushClipFullscreen() { list.PushClip(noClip) }
+func (list *List) PushClipFullscreen() { list.PushClip(NoClip) }
 
 func (list *List) PopClip() {
 	n := len(list.ClipStack)

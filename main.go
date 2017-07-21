@@ -12,6 +12,7 @@ import (
 	"github.com/egonelbre/spector/ui"
 	"github.com/egonelbre/spector/ui/g"
 	render "github.com/egonelbre/spector/ui/render/gl21"
+	"github.com/egonelbre/spector/ui/screen"
 
 	"net/http"
 	_ "net/http/pprof"
@@ -56,11 +57,14 @@ func main() {
 type App struct {
 	Window  *glfw.Window
 	Context ui.Context
-	View    ui.View
+	Screen  *screen.Screen
 }
 
 func NewApp(window *glfw.Window) *App {
-	return &App{Window: window}
+	app := &App{}
+	app.Window = window
+	app.Screen = screen.New()
+	return app
 }
 
 func (app *App) Run() {
@@ -111,5 +115,6 @@ func (app *App) UpdateFrame() {
 
 func (app *App) RenderFrame() {
 	mouse := &app.Context.Input.Mouse
-	app.Context.Draw.AddCircle(mouse.Pos, 5, g.Black)
+	app.Screen.Update(app.Context)
+	app.Context.Cursor.FillCircle(mouse.Pos, 5, g.Black)
 }

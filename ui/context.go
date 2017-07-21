@@ -18,9 +18,10 @@ type Context struct {
 }
 
 type Render struct {
-	Frame draw.Frame
-	Draw  *draw.List
-	Hover *draw.List
+	Frame  draw.Frame
+	Draw   *draw.List
+	Hover  *draw.List
+	Cursor *draw.List
 }
 
 type Input struct {
@@ -48,6 +49,7 @@ func (render *Render) BeginFrame() {
 	render.Frame.Reset()
 	render.Draw = render.Frame.Layer()
 	render.Hover = render.Frame.Layer()
+	render.Cursor = render.Frame.Layer()
 }
 
 func (mouse *Mouse) BeginFrame() {
