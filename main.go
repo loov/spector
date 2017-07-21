@@ -90,6 +90,7 @@ func (app *App) UpdateFrame() {
 		g.Vector{0, 0},
 		g.Vector{float32(w), float32(h)},
 	})
+	defer app.Context.EndFrame()
 
 	x, y := app.Window.GetCursorPos()
 	app.Context.Input.Mouse.Pos = g.Vector{float32(x), float32(y)}

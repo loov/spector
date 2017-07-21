@@ -51,17 +51,30 @@ func MinMax(a, b float32) (float32, float32) {
 	return b, a
 }
 
-func Lerp(a, b, p float32) float32 {
-	return a + (b-a)*p
+func Lerp(p, min, max float32) float32 {
+	return min + (max-min)*p
 }
 
-func LerpClamp(a, b, p float32) float32 {
+func InverseLerp(p, min, max float32) float32 {
+	return (p - min) / (max - min)
+}
+
+func LerpClamp(p, min, max float32) float32 {
 	if p < 0 {
-		return a
+		return min
 	} else if p > 1 {
-		return b
+		return max
 	}
-	return a + (b-a)*p
+	return min + (max-min)*p
+}
+
+func InverseLerpClamp(p, min, max float32) float32 {
+	if p < min {
+		return min
+	} else if p > max {
+		return max
+	}
+	return (p - min) / (max - min)
 }
 
 func Clamp(v, min, max float32) float32 {
