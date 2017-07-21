@@ -8,15 +8,24 @@ import (
 )
 
 type Context struct {
-	Render
-	Input Input
-	Area  g.Rect
+	*Render
+	Input *Input
+
+	Area g.Rect
 
 	ID    string
 	Index int
 	Count int
 }
 
+func NewContext() *Context {
+	return &Context{
+		Render: &Render{},
+		Input:  &Input{},
+	}
+}
+
+// TODO: rename to Layers
 type Render struct {
 	Frame  draw.Frame
 	Draw   *draw.List

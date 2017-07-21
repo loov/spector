@@ -65,6 +65,9 @@ func (r Rect) ClosestPoint(p Vector) Vector {
 	return p
 }
 
+func (r Rect) Dx() float32 { return r.Max.X - r.Min.X }
+func (r Rect) Dy() float32 { return r.Max.Y - r.Min.Y }
+
 func (r Rect) TopLeft() Vector     { return r.Min }
 func (r Rect) TopRight() Vector    { return Vector{r.Max.X, r.Min.Y} }
 func (r Rect) BottomLeft() Vector  { return Vector{r.Min.X, r.Max.Y} }

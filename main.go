@@ -56,13 +56,14 @@ func main() {
 
 type App struct {
 	Window  *glfw.Window
-	Context ui.Context
+	Context *ui.Context
 	Screen  *screen.Screen
 }
 
 func NewApp(window *glfw.Window) *App {
 	app := &App{}
 	app.Window = window
+	app.Context = ui.NewContext()
 	app.Screen = screen.New()
 	return app
 }
