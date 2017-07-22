@@ -11,11 +11,23 @@ type Input struct {
 	Mouse Mouse
 }
 
+type Cursor byte
+
+const (
+	ArrowCursor = Cursor(iota)
+	IBeamCursor
+	CrosshairCursor
+	HandCursor
+	HResizeCursor
+	VResizeCursor
+)
+
 type Mouse struct {
 	Pos      g.Vector
 	Down     bool
 	Pressed  bool
 	Released bool
+	Cursor   Cursor
 	Last     struct {
 		Pos  g.Vector
 		Down bool
@@ -24,6 +36,7 @@ type Mouse struct {
 }
 
 func (mouse *Mouse) BeginFrame() {
+	mouse.Cursor = ArrowCursor
 	mouse.Pressed = !mouse.Last.Down && mouse.Down
 	mouse.Released = mouse.Last.Down && !mouse.Down
 }

@@ -16,5 +16,5 @@ func RandBetween(min, max float32) float32 {
 }
 
 func RandColor(saturation, lightness float32) Color {
-	return HSL(Rand()*3, saturation, lightness)
+	return HSL(Rand(), saturation, lightness)
 }

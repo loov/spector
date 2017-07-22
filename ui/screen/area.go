@@ -7,7 +7,7 @@ import (
 
 const (
 	SplitterTabSize = 20
-	SplitterRadius  = 2
+	SplitterRadius  = 1
 )
 
 var (
@@ -30,6 +30,18 @@ func NewArea(screen *Screen) *Area {
 		Screen: screen,
 		Parent: nil,
 	}
+}
+
+func (area *Area) Clone() *Area {
+	clone := &Area{}
+	clone.Screen = area.Screen
+	clone.Parent = area.Parent
+	clone.Bounds = area.Bounds
+
+	//TODO: what to do with nested splitters?
+	clone.Vertical = area.Vertical
+	clone.Editor = area.Editor.Clone()
+	return clone
 }
 
 func (area *Area) Update(ctx *ui.Context) {
@@ -129,6 +141,29 @@ func (splitter *Splitter) Rect() g.Rect {
 	return splitter.Owner.Bounds.VerticalLine(splitter.Center(), SplitterRadius)
 }
 
+func (splitter *Splitter) Split() *Splitter {
+	other := &Splitter{}
+	other.Owner = splitter.Owner
+	other.Content = splitter.Content.Clone()
+	other.RelativeCenter = splitter.RelativeCenter
+
+	// TODO: move splitter insertion somewhere else
+	pivot := splitter.Index + 1
+	prev := splitter.Owner.Splitters
+	next := []*Splitter{}
+	next = append(next, prev[:pivot]...)
+	next = append(next, other)
+	next = append(next, prev[pivot:]...)
+	for i, splitter := range next {
+		splitter.Index = i
+	}
+	splitter.Owner.Splitters = next
+
+	splitter.RelativeCenter = splitter.Owner.AbsoluteToRelative(other.Center() - EditorMinSize)
+
+	return other
+}
+
 func (splitter *Splitter) Update(ctx *ui.Context) {
 	if splitter.Content != nil {
 		content := splitter.ContentArea()
@@ -143,15 +178,48 @@ func (splitter *Splitter) Update(ctx *ui.Context) {
 			ctx.Input.Mouse.Capture = func() bool {
 				center := splitter.Center()
 
-				distance := center - ctx.Input.Mouse.Pos.X
-				if distance > 0 {
-					halo := splitter.ContentArea()
-					halo.Min.X = ctx.Input.Mouse.Pos.X
+				cansplit := splitter.ContentArea().Dx() > 2*EditorMinSize
+				canmerge := !splitter.isLast()
+				if !canmerge && !cansplit {
+					splitter.Splitting = false
+					return true
+				}
 
-					alpha := g.Sat8(distance / EditorMinSize)
+				distance := ctx.Input.Mouse.Pos.X - center
+				halo := splitter.Rect() // TODO: optimize
+				if (distance < 0) && cansplit {
+					halo.Min.X = ctx.Input.Mouse.Pos.X
+					halo.Max.X = center
+
+					alpha := g.Sat8(g.Abs(distance) / EditorMinSize)
 					ctx.Hover.FillRect(&halo, g.Color{0xFF, 0xFF, 0xFF, alpha})
-				} else {
-					// merging
+
+					if distance < -EditorMinSize {
+						// split
+						splitter.Split()
+						splitter.Resizing = true
+						splitter.Splitting = false
+
+						ctx.Input.Mouse.Capture = func() bool {
+							min, max := splitter.MinMax()
+							splitter.SetCenter(g.Clamp(ctx.Input.Mouse.Pos.X, min, max))
+							splitter.Resizing = ctx.Input.Mouse.Down
+							return !ctx.Input.Mouse.Down
+						}
+						return !ctx.Input.Mouse.Down
+					}
+				} else if (distance > 0) && canmerge {
+					halo.Min.X = center
+					halo.Max.X = ctx.Input.Mouse.Pos.X
+
+					alpha := g.Sat8(g.Abs(distance) / EditorMinSize)
+					ctx.Hover.FillRect(&halo, g.Color{0xFF, 0xFF, 0xFF, alpha})
+
+					if distance > EditorMinSize {
+						// merge
+						splitter.Splitting = false
+						return true
+					}
 				}
 
 				splitter.Splitting = ctx.Input.Mouse.Down
@@ -160,10 +228,12 @@ func (splitter *Splitter) Update(ctx *ui.Context) {
 		}
 
 		if splitter.Splitting {
+			ctx.Input.Mouse.Cursor = ui.CrosshairCursor
 			distance := splitter.Center() - ctx.Input.Mouse.Pos.X
 			r = r.Add(g.Vector{-distance, 0})
 			ctx.Draw.FillRect(&r, g.Green)
 		} else if inside {
+			ctx.Input.Mouse.Cursor = ui.CrosshairCursor
 			ctx.Draw.FillRect(&r, g.Red)
 		} else {
 			ctx.Draw.FillRect(&r, g.Color{0x80, 0x80, 0x80, 0xff})
@@ -187,8 +257,10 @@ func (splitter *Splitter) Update(ctx *ui.Context) {
 		}
 
 		if splitter.Resizing {
+			ctx.Input.Mouse.Cursor = ui.HResizeCursor
 			ctx.Draw.FillRect(&r, g.Green)
 		} else if inside {
+			ctx.Input.Mouse.Cursor = ui.HResizeCursor
 			ctx.Draw.FillRect(&r, g.Red)
 		} else {
 			ctx.Draw.FillRect(&r, g.Color{0x80, 0x80, 0x80, 0xff})

@@ -67,5 +67,12 @@ func (editor *Editor) Update(ctx *ui.Context) {
 	ctx.Draw.FillRect(&editor.Bounds, editor.Color)
 }
 
+func (editor *Editor) Clone() *Editor {
+	clone := &Editor{}
+	clone.Area = editor.Area
+	clone.Color = editor.Color
+	return clone
+}
+
 type Region struct {
 }

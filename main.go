@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-gl/gl/v2.1/gl"
-	"github.com/go-gl/glfw/v3.1/glfw"
+	"github.com/go-gl/glfw/v3.2/glfw"
 
 	"github.com/egonelbre/spector/ui"
 	"github.com/egonelbre/spector/ui/g"
@@ -58,6 +58,9 @@ type App struct {
 	Window  *glfw.Window
 	Context *ui.Context
 	Screen  *screen.Screen
+
+	LastCursor ui.Cursor
+	Cursors    map[ui.Cursor]*glfw.Cursor
 }
 
 func NewApp(window *glfw.Window) *App {
@@ -65,6 +68,15 @@ func NewApp(window *glfw.Window) *App {
 	app.Window = window
 	app.Context = ui.NewContext()
 	app.Screen = screen.New()
+
+	app.Cursors = make(map[ui.Cursor]*glfw.Cursor)
+	app.Cursors[ui.ArrowCursor] = glfw.CreateStandardCursor(glfw.ArrowCursor)
+	app.Cursors[ui.IBeamCursor] = glfw.CreateStandardCursor(glfw.IBeamCursor)
+	app.Cursors[ui.CrosshairCursor] = glfw.CreateStandardCursor(glfw.CrosshairCursor)
+	app.Cursors[ui.HandCursor] = glfw.CreateStandardCursor(glfw.HandCursor)
+	app.Cursors[ui.HResizeCursor] = glfw.CreateStandardCursor(glfw.HResizeCursor)
+	app.Cursors[ui.VResizeCursor] = glfw.CreateStandardCursor(glfw.VResizeCursor)
+
 	return app
 }
 
@@ -101,6 +113,10 @@ func (app *App) UpdateFrame() {
 	app.RenderFrame()
 	app.Context.EndFrame()
 
+	if app.LastCursor != app.Context.Input.Mouse.Cursor {
+		app.LastCursor = app.Context.Input.Mouse.Cursor
+		app.Window.SetCursor(app.Cursors[app.LastCursor])
+	}
 	{ // reset window
 		gl.MatrixMode(gl.MODELVIEW)
 		gl.LoadIdentity()
@@ -117,7 +133,5 @@ func (app *App) UpdateFrame() {
 }
 
 func (app *App) RenderFrame() {
-	mouse := &app.Context.Input.Mouse
 	app.Screen.Update(app.Context)
-	app.Context.Cursor.FillCircle(mouse.Pos, 5, g.Black)
 }
