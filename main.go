@@ -117,6 +117,7 @@ func (app *App) UpdateFrame() {
 		app.LastCursor = app.Context.Input.Mouse.Cursor
 		app.Window.SetCursor(app.Cursors[app.LastCursor])
 	}
+
 	{ // reset window
 		gl.MatrixMode(gl.MODELVIEW)
 		gl.LoadIdentity()

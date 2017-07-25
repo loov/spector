@@ -10,45 +10,34 @@ const (
 )
 
 type Screen struct {
-	Root     *Area
 	Registry *Registry
+	Bounds   g.Rect
+	Areas    []*Area
 }
 
 func New() *Screen {
 	screen := &Screen{}
-	screen.Root = NewRootTestArea(screen)
 	screen.Registry = NewRegistry()
+	screen.Areas = []*Area{
+		NewTestArea(screen, g.Rect{g.Vector{0.0, 0.0}, g.Vector{0.5, 0.5}}),
+		NewTestArea(screen, g.Rect{g.Vector{0.5, 0.0}, g.Vector{1.0, 0.5}}),
+
+		NewTestArea(screen, g.Rect{g.Vector{0.0, 0.5}, g.Vector{0.5, 1.0}}),
+		NewTestArea(screen, g.Rect{g.Vector{0.5, 0.5}, g.Vector{1.0, 1.0}}),
+	}
 	return screen
 }
 
 func (screen *Screen) Update(ctx *ui.Context) {
-	screen.Root.Update(ctx)
+	screen.Bounds = ctx.Area
+	for _, area := range screen.Areas {
+		area.Update(ctx.Child(ctx.Area.Subset(area.RelBounds)))
+	}
 }
 
-func NewRootTestArea(screen *Screen) *Area {
-	root := NewArea(screen)
-	areas := []*Area{
-		NewTestArea(screen, root),
-		NewTestArea(screen, root),
-		NewTestArea(screen, root),
-	}
-	for i, child := range areas {
-		child.Parent = root
-
-		splitter := &Splitter{}
-		splitter.Owner = root
-		splitter.Content = areas[i]
-		splitter.Index = i
-		splitter.RelativeCenter = float32(i+1) / float32(len(areas))
-
-		root.Splitters = append(root.Splitters, splitter)
-	}
-	return root
-}
-
-func NewTestArea(screen *Screen, parent *Area) *Area {
+func NewTestArea(screen *Screen, relbounds g.Rect) *Area {
 	child := NewArea(screen)
-	child.Parent = parent
+	child.RelBounds = relbounds
 	child.Editor = &Editor{
 		Area:  child,
 		Color: g.RandColor(0.9, 0.9),
@@ -71,6 +60,7 @@ func (editor *Editor) Clone() *Editor {
 	clone := &Editor{}
 	clone.Area = editor.Area
 	clone.Color = editor.Color
+	clone.Color = g.RandColor(0.9, 0.9) // TODO: copy
 	return clone
 }
 

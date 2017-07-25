@@ -65,6 +65,26 @@ func (r Rect) ClosestPoint(p Vector) Vector {
 	return p
 }
 
+func (r Rect) ToRelative(p Vector) Vector {
+	return Vector{
+		X: InverseLerp(p.X, r.Min.X, r.Max.X),
+		Y: InverseLerp(p.Y, r.Min.Y, r.Max.Y),
+	}
+}
+
+func (r Rect) Subset(rel Rect) Rect {
+	return Rect{
+		Min: Vector{
+			Lerp(rel.Min.X, r.Min.X, r.Max.X),
+			Lerp(rel.Min.Y, r.Min.Y, r.Max.Y),
+		},
+		Max: Vector{
+			X: Lerp(rel.Max.X, r.Min.X, r.Max.X),
+			Y: Lerp(rel.Max.Y, r.Min.Y, r.Max.Y),
+		},
+	}
+}
+
 func (r Rect) Dx() float32 { return r.Max.X - r.Min.X }
 func (r Rect) Dy() float32 { return r.Max.Y - r.Min.Y }
 

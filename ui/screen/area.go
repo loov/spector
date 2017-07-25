@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	SplitterTabSize = 20
-	SplitterRadius  = 1
+	JoinSplitSize    = 20
+	AreaBorderRadius = 3
 )
 
 var (
@@ -15,82 +15,177 @@ var (
 )
 
 type Area struct {
-	Screen *Screen
-	Parent *Area  // nil for Root
-	Bounds g.Rect // last-bounds
-
-	// Either Split or Editor
-	Vertical  bool
-	Splitters []*Splitter
+	Screen    *Screen
+	RelBounds g.Rect
+	Bounds    g.Rect // last-bounds
 	Editor    *Editor
 }
 
 func NewArea(screen *Screen) *Area {
 	return &Area{
-		Screen: screen,
-		Parent: nil,
+		Screen:    screen,
+		RelBounds: g.Rect{g.V0, g.V1},
 	}
 }
 
 func (area *Area) Clone() *Area {
 	clone := &Area{}
 	clone.Screen = area.Screen
-	clone.Parent = area.Parent
+	clone.RelBounds = area.RelBounds
 	clone.Bounds = area.Bounds
-
-	//TODO: what to do with nested splitters?
-	clone.Vertical = area.Vertical
 	clone.Editor = area.Editor.Clone()
+
 	return clone
 }
 
 func (area *Area) Update(ctx *ui.Context) {
 	area.Bounds = ctx.Area
+	area.Editor.Update(ctx)
 
-	if len(area.Splitters) > 0 {
-		for _, splitter := range area.Splitters {
-			splitter.Update(ctx)
+	{
+		r := area.JoinSplitRect()
+		canCapture := ctx.Input.Mouse.Capture == nil && r.Contains(ctx.Input.Mouse.Pos)
+		if canCapture && ctx.Input.Mouse.Pressed {
+			split := &JoinSplit{
+				Input:   ctx.Input,
+				Initial: area,
+			}
+			split.Init()
+			ctx.Input.Mouse.Capture = split.Update
 		}
+
+		if canCapture {
+			ctx.Input.Mouse.Cursor = ui.CrosshairCursor
+			ctx.Draw.FillRect(&r, g.Red)
+		} else {
+			ctx.Draw.FillRect(&r, g.Color{0x80, 0x80, 0x80, 0xff})
+		}
+	}
+
+	{
+		r := area.Bounds
+		p := ctx.Input.Mouse.Pos
+
+		canCapture := ctx.Input.Mouse.Capture == nil
+
+		nearLeft := g.Abs(r.Min.X-p.X) <= AreaBorderRadius
+		nearRight := g.Abs(r.Max.X-p.X) <= AreaBorderRadius
+
+		nearTop := g.Abs(r.Min.Y-p.Y) <= AreaBorderRadius
+		nearBottom := g.Abs(r.Max.Y-p.Y) <= AreaBorderRadius
+
+		nearEdge := nearLeft || nearRight || nearTop || nearBottom
+
+		if canCapture && nearEdge && ctx.Input.Mouse.Pressed {
+			resize := &Resize{
+				Input:   ctx.Input,
+				Initial: area,
+			}
+			resize.Init()
+			ctx.Input.Mouse.Capture = resize.Update
+		}
+
+		if (nearLeft || nearRight) && (nearTop || nearBottom) {
+			ctx.Input.Mouse.Cursor = ui.CrosshairCursor
+			ctx.Draw.StrokeRect(&area.Bounds, 1, g.Red)
+		} else if nearLeft || nearRight {
+			ctx.Input.Mouse.Cursor = ui.HResizeCursor
+			ctx.Draw.StrokeRect(&area.Bounds, 1, g.Red)
+		} else if nearTop || nearBottom {
+			ctx.Input.Mouse.Cursor = ui.VResizeCursor
+			ctx.Draw.StrokeRect(&area.Bounds, 1, g.Red)
+		} else {
+			ctx.Draw.StrokeRect(&area.Bounds, 1, g.Color{0x80, 0x80, 0x80, 0xff})
+		}
+
+	}
+}
+func (area *Area) JoinSplitRect() g.Rect {
+	r := area.Bounds
+	r.Min.X = r.Max.X - JoinSplitSize
+	r.Max.Y = r.Min.Y + JoinSplitSize
+	return r
+}
+
+type JoinSplit struct {
+	Input   *ui.Input
+	Screen  *Screen
+	Initial *Area
+
+	X []*float32
+	Y []*float32
+}
+
+func (act *JoinSplit) Init() {
+	act.Screen = act.Initial.Screen
+
+	//for _, area := range act.Screen.Areas {
+
+	//}
+}
+
+func (act *JoinSplit) Update() bool {
+	act.Input.Mouse.Cursor = ui.HandCursor
+	return !act.Input.Mouse.Down
+}
+
+type Resize struct {
+	Input   *ui.Input
+	Screen  *Screen
+	Initial *Area
+
+	X []*float32
+	Y []*float32
+}
+
+func (act *Resize) Init() {
+	act.Screen = act.Initial.Screen
+
+	p := act.Input.Mouse.Pos
+	for _, area := range act.Screen.Areas {
+		if g.Abs(area.Bounds.Min.X-p.X) <= AreaBorderRadius {
+			act.X = append(act.X, &area.RelBounds.Min.X)
+		}
+		if g.Abs(area.Bounds.Max.X-p.X) <= AreaBorderRadius {
+			act.X = append(act.X, &area.RelBounds.Max.X)
+		}
+
+		if g.Abs(area.Bounds.Min.Y-p.Y) <= AreaBorderRadius {
+			act.Y = append(act.Y, &area.RelBounds.Min.Y)
+		}
+		if g.Abs(area.Bounds.Max.Y-p.Y) <= AreaBorderRadius {
+			act.Y = append(act.Y, &area.RelBounds.Max.Y)
+		}
+	}
+}
+
+func (act *Resize) Update() bool {
+	if !act.Input.Mouse.Down {
+		return true
+	}
+
+	if len(act.X) > 0 && len(act.Y) > 0 {
+		act.Input.Mouse.Cursor = ui.CrosshairCursor
+	} else if len(act.X) > 0 {
+		act.Input.Mouse.Cursor = ui.HResizeCursor
+	} else if len(act.Y) > 0 {
+		act.Input.Mouse.Cursor = ui.VResizeCursor
 	} else {
-		area.Editor.Update(ctx)
+		return true
 	}
-}
 
-func (area *Area) RelativeToAbsolute(v float32) float32 {
-	return g.LerpClamp(v, area.Bounds.Min.X, area.Bounds.Max.X)
-}
-
-func (area *Area) AbsoluteToRelative(v float32) float32 {
-	return g.InverseLerpClamp(v, area.Bounds.Min.X, area.Bounds.Max.X)
-}
-
-type Splitter struct {
-	Owner   *Area
-	Content *Area
-	Index   int
-
-	RelativeCenter float32
-
-	Active    bool
-	Resizing  bool
-	Splitting bool
-}
-
-func NewSplitter(owner *Area) *Splitter {
-	return &Splitter{Owner: owner}
-}
-
-func (splitter *Splitter) NeighborCenters() (left, right float32) {
-	rmin, rmax := float32(0), float32(1)
-	if 0 <= splitter.Index-1 {
-		rmin = splitter.Owner.Splitters[splitter.Index-1].RelativeCenter
+	rp := act.Screen.Bounds.ToRelative(act.Input.Mouse.Pos)
+	for _, px := range act.X {
+		*px = rp.X
 	}
-	if splitter.Index+1 < len(splitter.Owner.Splitters) {
-		rmax = splitter.Owner.Splitters[splitter.Index+1].RelativeCenter
+	for _, py := range act.Y {
+		*py = rp.Y
 	}
-	return splitter.Owner.RelativeToAbsolute(rmin), splitter.Owner.RelativeToAbsolute(rmax)
+
+	return false
 }
 
+/*
 func (splitter *Splitter) MinMax() (float32, float32) {
 	min, max := splitter.NeighborCenters()
 	min += EditorMinSize
@@ -127,9 +222,9 @@ func (splitter *Splitter) ContentArea() g.Rect {
 func (splitter *Splitter) TabRect() g.Rect {
 	center := splitter.Center()
 	r := splitter.Owner.Bounds
-	r.Min.X = center - SplitterTabSize
+	r.Min.X = center - JoinSplitSize
 	r.Max.X = center
-	r.Max.Y = r.Min.Y + SplitterTabSize
+	r.Max.Y = r.Min.Y + JoinSplitSize
 	return r
 }
 
@@ -267,3 +362,4 @@ func (splitter *Splitter) Update(ctx *ui.Context) {
 		}
 	}
 }
+*/
