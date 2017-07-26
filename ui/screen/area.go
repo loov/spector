@@ -11,7 +11,9 @@ const (
 )
 
 var (
-	HaloColor = g.Color{0x00, 0x00, 0x00, 0xFF}
+	AreaBackground       = g.Color{0x80, 0x80, 0x80, 0xFF}
+	BorderColor          = g.Color{0x80, 0x80, 0x80, 0xFF}
+	BorderHighlightColor = g.Color{0xFF, 0x80, 0x80, 0xFF}
 )
 
 type Area struct {
@@ -46,19 +48,16 @@ func (area *Area) Update(ctx *ui.Context) {
 		r := area.JoinSplitRect()
 		canCapture := ctx.Input.Mouse.Capture == nil && r.Contains(ctx.Input.Mouse.Pos)
 		if canCapture && ctx.Input.Mouse.Pressed {
-			split := &JoinSplit{
-				Input:   ctx.Input,
-				Initial: area,
-			}
-			split.Init()
+			split := &JoinSplit{Target: area}
+			split.Init(ctx)
 			ctx.Input.Mouse.Capture = split.Update
 		}
 
 		if canCapture {
 			ctx.Input.Mouse.Cursor = ui.CrosshairCursor
-			ctx.Draw.FillRect(&r, g.Red)
+			ctx.Draw.FillRect(&r, BorderHighlightColor)
 		} else {
-			ctx.Draw.FillRect(&r, g.Color{0x80, 0x80, 0x80, 0xff})
+			ctx.Draw.FillRect(&r, BorderColor)
 		}
 	}
 
@@ -77,25 +76,22 @@ func (area *Area) Update(ctx *ui.Context) {
 		nearEdge := nearLeft || nearRight || nearTop || nearBottom
 
 		if canCapture && nearEdge && ctx.Input.Mouse.Pressed {
-			resize := &Resize{
-				Input:   ctx.Input,
-				Initial: area,
-			}
-			resize.Init()
+			resize := &Resize{Target: area}
+			resize.Init(ctx)
 			ctx.Input.Mouse.Capture = resize.Update
 		}
 
 		if (nearLeft || nearRight) && (nearTop || nearBottom) {
 			ctx.Input.Mouse.Cursor = ui.CrosshairCursor
-			ctx.Draw.StrokeRect(&area.Bounds, 1, g.Red)
+			ctx.Draw.StrokeRect(&area.Bounds, 1, BorderHighlightColor)
 		} else if nearLeft || nearRight {
 			ctx.Input.Mouse.Cursor = ui.HResizeCursor
-			ctx.Draw.StrokeRect(&area.Bounds, 1, g.Red)
+			ctx.Draw.StrokeRect(&area.Bounds, 1, BorderHighlightColor)
 		} else if nearTop || nearBottom {
 			ctx.Input.Mouse.Cursor = ui.VResizeCursor
-			ctx.Draw.StrokeRect(&area.Bounds, 1, g.Red)
+			ctx.Draw.StrokeRect(&area.Bounds, 1, BorderHighlightColor)
 		} else {
-			ctx.Draw.StrokeRect(&area.Bounds, 1, g.Color{0x80, 0x80, 0x80, 0xff})
+			ctx.Draw.StrokeRect(&area.Bounds, 1, BorderColor)
 		}
 
 	}
@@ -108,40 +104,72 @@ func (area *Area) JoinSplitRect() g.Rect {
 }
 
 type JoinSplit struct {
-	Input   *ui.Input
-	Screen  *Screen
-	Initial *Area
+	Screen *Screen
+	Target *Area
 
 	X []*float32
 	Y []*float32
 }
 
-func (act *JoinSplit) Init() {
-	act.Screen = act.Initial.Screen
-
-	//for _, area := range act.Screen.Areas {
-
-	//}
+func (act *JoinSplit) Init(ctx *ui.Context) {
+	act.Screen = act.Target.Screen
 }
 
-func (act *JoinSplit) Update() bool {
-	act.Input.Mouse.Cursor = ui.HandCursor
-	return !act.Input.Mouse.Down
+func (act *JoinSplit) Update(ctx *ui.Context) bool {
+	if !ctx.Input.Mouse.Down {
+		return true
+	}
+
+	r := act.Target.Bounds
+	p := ctx.Input.Mouse.Pos
+	d := p.Sub(r.TopRight())
+	if d.X < 0 && d.Y > 0 {
+		r = r.Deflate(g.Vector{AreaBorderRadius / 2, AreaBorderRadius / 2})
+		if -d.X > d.Y {
+			r.Min.X = p.X
+			dist := -d.X
+			alpha := g.Sat8(g.Abs(dist) / EditorMinSize)
+			ctx.Hover.FillRect(&r, AreaBackground.WithAlpha(alpha))
+			if dist > EditorMinSize {
+				act.SplitHorizontal(ctx)
+			}
+		} else {
+			r.Max.Y = p.Y
+			dist := d.Y
+			alpha := g.Sat8(g.Abs(dist) / EditorMinSize)
+			ctx.Hover.FillRect(&r, AreaBackground.WithAlpha(alpha))
+			if dist > EditorMinSize {
+				act.SplitVertical(ctx)
+			}
+		}
+
+		// TODO: draw plus sign in center
+	}
+
+	ctx.Input.Mouse.Cursor = ui.HandCursor
+	return false
+}
+
+func (act *JoinSplit) SplitVertical(ctx *ui.Context) {
+
+}
+
+func (act *JoinSplit) SplitHorizontal(ctx *ui.Context) {
+
 }
 
 type Resize struct {
-	Input   *ui.Input
-	Screen  *Screen
-	Initial *Area
+	Screen *Screen
+	Target *Area
 
 	X []*float32
 	Y []*float32
 }
 
-func (act *Resize) Init() {
-	act.Screen = act.Initial.Screen
+func (act *Resize) Init(ctx *ui.Context) {
+	act.Screen = act.Target.Screen
 
-	p := act.Input.Mouse.Pos
+	p := ctx.Input.Mouse.Pos
 	for _, area := range act.Screen.Areas {
 		if g.Abs(area.Bounds.Min.X-p.X) <= AreaBorderRadius {
 			act.X = append(act.X, &area.RelBounds.Min.X)
@@ -159,22 +187,22 @@ func (act *Resize) Init() {
 	}
 }
 
-func (act *Resize) Update() bool {
-	if !act.Input.Mouse.Down {
+func (act *Resize) Update(ctx *ui.Context) bool {
+	if !ctx.Input.Mouse.Down {
 		return true
 	}
 
 	if len(act.X) > 0 && len(act.Y) > 0 {
-		act.Input.Mouse.Cursor = ui.CrosshairCursor
+		ctx.Input.Mouse.Cursor = ui.CrosshairCursor
 	} else if len(act.X) > 0 {
-		act.Input.Mouse.Cursor = ui.HResizeCursor
+		ctx.Input.Mouse.Cursor = ui.HResizeCursor
 	} else if len(act.Y) > 0 {
-		act.Input.Mouse.Cursor = ui.VResizeCursor
+		ctx.Input.Mouse.Cursor = ui.VResizeCursor
 	} else {
 		return true
 	}
 
-	rp := act.Screen.Bounds.ToRelative(act.Input.Mouse.Pos)
+	rp := act.Screen.Bounds.ToRelative(ctx.Input.Mouse.Pos)
 	for _, px := range act.X {
 		*px = rp.X
 	}

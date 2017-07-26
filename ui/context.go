@@ -31,14 +31,14 @@ type Render struct {
 	Cursor *draw.List
 }
 
-func (context *Context) BeginFrame(area g.Rect) {
-	context.Area = area
-	context.Render.BeginFrame()
-	context.Input.Mouse.BeginFrame()
+func (ctx *Context) BeginFrame(area g.Rect) {
+	ctx.Area = area
+	ctx.Render.BeginFrame()
+	ctx.Input.Mouse.BeginFrame()
 }
 
-func (context *Context) EndFrame() {
-	context.Input.Mouse.EndFrame()
+func (ctx *Context) EndFrame() {
+	ctx.Input.Mouse.EndFrame(ctx)
 }
 
 func (render *Render) BeginFrame() {
