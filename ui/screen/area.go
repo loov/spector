@@ -106,9 +106,6 @@ func (area *Area) JoinSplitRect() g.Rect {
 type JoinSplit struct {
 	Screen *Screen
 	Target *Area
-
-	X []*float32
-	Y []*float32
 }
 
 func (act *JoinSplit) Init(ctx *ui.Context) {
@@ -151,11 +148,33 @@ func (act *JoinSplit) Update(ctx *ui.Context) bool {
 }
 
 func (act *JoinSplit) SplitVertical(ctx *ui.Context) {
+	resize := &Resize{}
+	resize.Screen = act.Screen
+	resize.Target = act.Target
+	resize.Init(ctx)
+	resize.X, resize.Y = nil, nil
 
+	resize.Y = []*float32{
+		&act.Target.RelBounds.Min.Y,
+	}
+	//TODO
+
+	ctx.Input.Mouse.Capture = resize.Update
 }
 
 func (act *JoinSplit) SplitHorizontal(ctx *ui.Context) {
+	resize := &Resize{}
+	resize.Screen = act.Screen
+	resize.Target = act.Target
+	resize.Init(ctx)
+	resize.X, resize.Y = nil, nil
 
+	resize.X = []*float32{
+		&act.Target.RelBounds.Max.X,
+	}
+	//TODO
+
+	ctx.Input.Mouse.Capture = resize.Update
 }
 
 type Resize struct {

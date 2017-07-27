@@ -10,6 +10,10 @@ func (a Vector) ScaleTo(size float32) Vector {
 	return a.Scale(ilen)
 }
 
+func SegmentNormal(a, b Vector) Vector {
+	return b.Sub(a).Rotate()
+}
+
 func (r Rect) AsInt32() (x, y, w, h int32) {
 	x = int32(r.Min.X)
 	y = int32(r.Min.Y)
@@ -99,6 +103,35 @@ func (r Rect) VerticalLine(x, radius float32) Rect {
 	return r
 }
 
-func SegmentNormal(a, b Vector) Vector {
-	return b.Sub(a).Rotate()
+type Hit uint8
+
+const (
+	Inside = Hit(1 << iota)
+	Left
+	Top
+	Right
+	Bottom
+)
+
+func (r Rect) HitTest(p Vector, rad float32) Hit {
+	var hit Hit
+	if !r.Inflate(Vector{rad, rad}).Contains(p) {
+		return hit
+	}
+
+	hit |= Inside
+	if Abs(r.Min.X-p.X) <= rad {
+		hit |= Left
+	}
+	if Abs(r.Min.Y-p.Y) <= rad {
+		hit |= Top
+	}
+	if Abs(r.Max.X-p.X) <= rad {
+		hit |= Right
+	}
+	if Abs(r.Max.Y-p.Y) <= rad {
+		hit |= Bottom
+	}
+
+	return hit
 }
