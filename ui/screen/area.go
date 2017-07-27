@@ -154,10 +154,13 @@ func (act *JoinSplit) SplitVertical(ctx *ui.Context) {
 	resize.Init(ctx)
 	resize.X, resize.Y = nil, nil
 
+	next := resize.Target.Clone()
+	resize.Screen.Areas = append(resize.Screen.Areas, next)
+
 	resize.Y = []*float32{
 		&act.Target.RelBounds.Min.Y,
+		&next.RelBounds.Max.Y,
 	}
-	//TODO
 
 	ctx.Input.Mouse.Capture = resize.Update
 }
@@ -169,10 +172,13 @@ func (act *JoinSplit) SplitHorizontal(ctx *ui.Context) {
 	resize.Init(ctx)
 	resize.X, resize.Y = nil, nil
 
+	next := resize.Target.Clone()
+	resize.Screen.Areas = append(resize.Screen.Areas, next)
+
 	resize.X = []*float32{
 		&act.Target.RelBounds.Max.X,
+		&next.RelBounds.Min.X,
 	}
-	//TODO
 
 	ctx.Input.Mouse.Capture = resize.Update
 }
