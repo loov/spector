@@ -1,6 +1,8 @@
 package screen
 
 import (
+	"sort"
+
 	"github.com/egonelbre/spector/ui"
 	"github.com/egonelbre/spector/ui/g"
 )
@@ -195,21 +197,10 @@ func (act *Resize) Init(ctx *ui.Context) {
 	act.Screen = act.Target.Screen
 
 	p := ctx.Input.Mouse.Pos
-	for _, area := range act.Screen.Areas {
-		if g.Abs(area.Bounds.Min.X-p.X) <= AreaBorderRadius {
-			act.X = append(act.X, &area.RelBounds.Min.X)
-		}
-		if g.Abs(area.Bounds.Max.X-p.X) <= AreaBorderRadius {
-			act.X = append(act.X, &area.RelBounds.Max.X)
-		}
+	x, y := FindLinked(act.Screen, p, act.Screen.Bounds.ToRelative(p))
 
-		if g.Abs(area.Bounds.Min.Y-p.Y) <= AreaBorderRadius {
-			act.Y = append(act.Y, &area.RelBounds.Min.Y)
-		}
-		if g.Abs(area.Bounds.Max.Y-p.Y) <= AreaBorderRadius {
-			act.Y = append(act.Y, &area.RelBounds.Max.Y)
-		}
-	}
+	act.X = y.Ps
+	act.Y = x.Ps
 }
 
 func (act *Resize) Update(ctx *ui.Context) bool {
@@ -238,181 +229,101 @@ func (act *Resize) Update(ctx *ui.Context) bool {
 	return false
 }
 
-/*
-func (splitter *Splitter) MinMax() (float32, float32) {
-	min, max := splitter.NeighborCenters()
-	min += EditorMinSize
-	max -= EditorMinSize
-	center := splitter.Center()
-	if min > center {
-		min = center
-	}
-	if max < center {
-		max = center
-	}
-	return min, max
-}
+func FindLinked(screen *Screen, at, relat g.Vector) (x, y *Segment) {
+	xsegs := []*Segment{}
+	ysegs := []*Segment{}
 
-func (splitter *Splitter) Center() float32 {
-	return splitter.Owner.RelativeToAbsolute(splitter.RelativeCenter)
-}
+	// collect potential segments
+	for _, area := range screen.Areas {
+		// hit := area.Bounds.Test(at, AreaBorderRadius)
 
-func (splitter *Splitter) SetCenter(absolute float32) {
-	splitter.RelativeCenter = splitter.Owner.AbsoluteToRelative(absolute)
-}
-
-func (splitter *Splitter) ContentArea() g.Rect {
-	left, _ := splitter.NeighborCenters()
-	r := splitter.Owner.Bounds
-	r.Min.X = left
-	if splitter.Index > 0 {
-		r.Min.X += SplitterRadius
-	}
-	r.Max.X = splitter.Center() - SplitterRadius
-	return r
-}
-
-func (splitter *Splitter) TabRect() g.Rect {
-	center := splitter.Center()
-	r := splitter.Owner.Bounds
-	r.Min.X = center - JoinSplitSize
-	r.Max.X = center
-	r.Max.Y = r.Min.Y + JoinSplitSize
-	return r
-}
-
-func (splitter *Splitter) isLast() bool {
-	return len(splitter.Owner.Splitters) == splitter.Index+1
-}
-
-func (splitter *Splitter) Rect() g.Rect {
-	return splitter.Owner.Bounds.VerticalLine(splitter.Center(), SplitterRadius)
-}
-
-func (splitter *Splitter) Split() *Splitter {
-	other := &Splitter{}
-	other.Owner = splitter.Owner
-	other.Content = splitter.Content.Clone()
-	other.RelativeCenter = splitter.RelativeCenter
-
-	// TODO: move splitter insertion somewhere else
-	pivot := splitter.Index + 1
-	prev := splitter.Owner.Splitters
-	next := []*Splitter{}
-	next = append(next, prev[:pivot]...)
-	next = append(next, other)
-	next = append(next, prev[pivot:]...)
-	for i, splitter := range next {
-		splitter.Index = i
-	}
-	splitter.Owner.Splitters = next
-
-	splitter.RelativeCenter = splitter.Owner.AbsoluteToRelative(other.Center() - EditorMinSize)
-
-	return other
-}
-
-func (splitter *Splitter) Update(ctx *ui.Context) {
-	if splitter.Content != nil {
-		content := splitter.ContentArea()
-		splitter.Content.Update(ctx.Child(content))
-	}
-
-	{ // split tab drawing
-		r := splitter.TabRect()
-		inside := r.Contains(ctx.Input.Mouse.Pos) && ctx.Input.Mouse.Capture == nil
-		if inside && ctx.Input.Mouse.Pressed {
-			splitter.Splitting = true
-			ctx.Input.Mouse.Capture = func() bool {
-				center := splitter.Center()
-
-				cansplit := splitter.ContentArea().Dx() > 2*EditorMinSize
-				canmerge := !splitter.isLast()
-				if !canmerge && !cansplit {
-					splitter.Splitting = false
-					return true
-				}
-
-				distance := ctx.Input.Mouse.Pos.X - center
-				halo := splitter.Rect() // TODO: optimize
-				if (distance < 0) && cansplit {
-					halo.Min.X = ctx.Input.Mouse.Pos.X
-					halo.Max.X = center
-
-					alpha := g.Sat8(g.Abs(distance) / EditorMinSize)
-					ctx.Hover.FillRect(&halo, g.Color{0xFF, 0xFF, 0xFF, alpha})
-
-					if distance < -EditorMinSize {
-						// split
-						splitter.Split()
-						splitter.Resizing = true
-						splitter.Splitting = false
-
-						ctx.Input.Mouse.Capture = func() bool {
-							min, max := splitter.MinMax()
-							splitter.SetCenter(g.Clamp(ctx.Input.Mouse.Pos.X, min, max))
-							splitter.Resizing = ctx.Input.Mouse.Down
-							return !ctx.Input.Mouse.Down
-						}
-						return !ctx.Input.Mouse.Down
-					}
-				} else if (distance > 0) && canmerge {
-					halo.Min.X = center
-					halo.Max.X = ctx.Input.Mouse.Pos.X
-
-					alpha := g.Sat8(g.Abs(distance) / EditorMinSize)
-					ctx.Hover.FillRect(&halo, g.Color{0xFF, 0xFF, 0xFF, alpha})
-
-					if distance > EditorMinSize {
-						// merge
-						splitter.Splitting = false
-						return true
-					}
-				}
-
-				splitter.Splitting = ctx.Input.Mouse.Down
-				return !ctx.Input.Mouse.Down
-			}
+		if g.Abs(area.Bounds.Min.X-at.X) < AreaBorderRadius {
+			ysegs = append(ysegs, &Segment{
+				Min: area.RelBounds.Min.Y,
+				Max: area.RelBounds.Max.Y,
+				Ps:  []*float32{&area.RelBounds.Min.X},
+			})
 		}
 
-		if splitter.Splitting {
-			ctx.Input.Mouse.Cursor = ui.CrosshairCursor
-			distance := splitter.Center() - ctx.Input.Mouse.Pos.X
-			r = r.Add(g.Vector{-distance, 0})
-			ctx.Draw.FillRect(&r, g.Green)
-		} else if inside {
-			ctx.Input.Mouse.Cursor = ui.CrosshairCursor
-			ctx.Draw.FillRect(&r, g.Red)
-		} else {
-			ctx.Draw.FillRect(&r, g.Color{0x80, 0x80, 0x80, 0xff})
+		if g.Abs(area.Bounds.Min.Y-at.Y) < AreaBorderRadius {
+			xsegs = append(xsegs, &Segment{
+				Min: area.RelBounds.Min.X,
+				Max: area.RelBounds.Max.X,
+				Ps:  []*float32{&area.RelBounds.Min.Y},
+			})
+		}
+
+		if g.Abs(area.Bounds.Max.X-at.X) < AreaBorderRadius {
+			ysegs = append(ysegs, &Segment{
+				Min: area.RelBounds.Min.Y,
+				Max: area.RelBounds.Max.Y,
+				Ps:  []*float32{&area.RelBounds.Max.X},
+			})
+		}
+
+		if g.Abs(area.Bounds.Max.Y-at.Y) < AreaBorderRadius {
+			xsegs = append(xsegs, &Segment{
+				Min: area.RelBounds.Min.X,
+				Max: area.RelBounds.Max.X,
+				Ps:  []*float32{&area.RelBounds.Max.Y},
+			})
 		}
 	}
 
-	{ // separator drawing / moving
-		r := splitter.Rect()
-		inside := false
-		if !splitter.isLast() {
-			inside = r.Contains(ctx.Input.Mouse.Pos) && ctx.Input.Mouse.Capture == nil
-			if inside && ctx.Input.Mouse.Pressed {
-				splitter.Resizing = true
-				ctx.Input.Mouse.Capture = func() bool {
-					min, max := splitter.MinMax()
-					splitter.SetCenter(g.Clamp(ctx.Input.Mouse.Pos.X, min, max))
-					splitter.Resizing = ctx.Input.Mouse.Down
-					return !ctx.Input.Mouse.Down
-				}
-			}
-		}
+	xsegs, ysegs = Merge(xsegs), Merge(ysegs)
+	return FindMatch(xsegs, relat.X), FindMatch(ysegs, relat.Y)
+}
 
-		if splitter.Resizing {
-			ctx.Input.Mouse.Cursor = ui.HResizeCursor
-			ctx.Draw.FillRect(&r, g.Green)
-		} else if inside {
-			ctx.Input.Mouse.Cursor = ui.HResizeCursor
-			ctx.Draw.FillRect(&r, g.Red)
-		} else {
-			ctx.Draw.FillRect(&r, g.Color{0x80, 0x80, 0x80, 0xff})
+func Merge(segs []*Segment) []*Segment {
+	if len(segs) == 0 {
+		return nil
+	}
+	sort.Slice(segs, func(i, k int) bool {
+		return segs[i].Less(segs[k])
+	})
+
+	xs := []*Segment{segs[0]}
+	for _, seg := range segs[1:] {
+		if !xs[len(xs)-1].Merge(seg, AreaBorderRadius) {
+			xs = append(xs, seg)
 		}
 	}
+
+	return xs
 }
-*/
+
+func FindMatch(segs []*Segment, p float32) *Segment {
+	for _, seg := range segs {
+		if seg.Contains(p, AreaBorderRadius) {
+			return seg
+		}
+	}
+	return &Segment{Min: p, Max: p}
+}
+
+type Segment struct {
+	Min, Max float32
+	Ps       []*float32
+}
+
+func (a *Segment) Contains(p, r float32) bool {
+	return a.Min-r <= p && p <= a.Max+r
+}
+
+func (a *Segment) Merge(b *Segment, r float32) bool {
+	if a.Contains(b.Min, r) {
+		if a.Max < b.Max {
+			a.Max = b.Max
+		}
+		a.Ps = append(a.Ps, b.Ps...)
+		return true
+	}
+	return false
+}
+
+func (a *Segment) Less(b *Segment) bool {
+	if a.Min == b.Min {
+		return a.Max > b.Max
+	}
+	return a.Min < b.Min
+}

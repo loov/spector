@@ -97,6 +97,11 @@ func (r Rect) TopRight() Vector    { return Vector{r.Max.X, r.Min.Y} }
 func (r Rect) BottomLeft() Vector  { return Vector{r.Min.X, r.Max.Y} }
 func (r Rect) BottomRight() Vector { return r.Max }
 
+func (r Rect) LeftCenter() Vector   { return Vector{r.Min.X, (r.Min.Y + r.Max.Y) / 2} }
+func (r Rect) TopCenter() Vector    { return Vector{(r.Min.X + r.Max.X) / 2, r.Min.Y} }
+func (r Rect) RightCenter() Vector  { return Vector{r.Max.X, (r.Min.Y + r.Max.Y) / 2} }
+func (r Rect) BottomCenter() Vector { return Vector{(r.Min.X + r.Max.X) / 2, r.Max.Y} }
+
 func (r Rect) VerticalLine(x, radius float32) Rect {
 	r.Min.X = x - radius
 	r.Max.X = x + radius
@@ -113,7 +118,9 @@ const (
 	Bottom
 )
 
-func (r Rect) HitTest(p Vector, rad float32) Hit {
+func (h Hit) Contains(sub Hit) bool { return h&sub == sub }
+
+func (r Rect) Test(p Vector, rad float32) Hit {
 	var hit Hit
 	if !r.Inflate(Vector{rad, rad}).Contains(p) {
 		return hit
