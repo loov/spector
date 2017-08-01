@@ -33,7 +33,7 @@ func main() {
 	defer glfw.Terminate()
 
 	glfw.WindowHint(glfw.Resizable, glfw.True)
-	glfw.WindowHint(glfw.Visible, glfw.False) // do not steal focus
+	// glfw.WindowHint(glfw.Visible, glfw.False) // do not steal focus
 
 	glfw.WindowHint(glfw.ContextVersionMajor, 2)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
@@ -97,6 +97,7 @@ func (app *App) Run() {
 }
 
 func (app *App) UpdateFrame() {
+	fw, fh := app.Window.GetFramebufferSize()
 	w, h := app.Window.GetSize()
 	x, y := app.Window.GetCursorPos()
 
@@ -122,7 +123,7 @@ func (app *App) UpdateFrame() {
 		gl.MatrixMode(gl.MODELVIEW)
 		gl.LoadIdentity()
 
-		gl.Viewport(0, 0, int32(w), int32(h))
+		gl.Viewport(0, 0, int32(fw), int32(fh))
 		gl.Ortho(0, float64(w), float64(h), 0, 30, -30)
 		gl.ClearColor(1, 1, 1, 1)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
