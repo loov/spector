@@ -1,5 +1,7 @@
 package g
 
+var Rect01 = Rect{V0, V1}
+
 func (a Vector) Rotate() Vector { return Vector{-a.Y, a.X} }
 
 func (a Vector) ScaleTo(size float32) Vector {
@@ -9,6 +11,15 @@ func (a Vector) ScaleTo(size float32) Vector {
 	}
 	return a.Scale(ilen)
 }
+
+func (a Vector) Inflate(r Vector) Rect {
+	return Rect{
+		Min: a.Sub(r),
+		Max: a.Add(r),
+	}
+}
+
+func (a Vector) Rect() Rect { return Rect{a, a} }
 
 func SegmentNormal(a, b Vector) Vector {
 	return b.Sub(a).Rotate()
@@ -60,13 +71,20 @@ func (r Rect) ClosestPoint(p Vector) Vector {
 		p.X = r.Min.X
 	}
 
-	if p.X > r.Max.X {
-		p.X = r.Max.X
-	} else if p.X < r.Min.X {
-		p.X = r.Min.X
+	if p.Y > r.Max.Y {
+		p.Y = r.Max.Y
+	} else if p.Y < r.Min.Y {
+		p.Y = r.Min.Y
 	}
 
 	return p
+}
+
+func (r Rect) ToGlobal(p Vector) Vector {
+	return Vector{
+		X: Lerp(p.X, r.Min.X, r.Max.X),
+		Y: Lerp(p.Y, r.Min.Y, r.Max.Y),
+	}
 }
 
 func (r Rect) ToRelative(p Vector) Vector {

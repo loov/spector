@@ -31,14 +31,14 @@ func Abs(v float32) float32 {
 }
 
 func Min(a, b float32) float32 {
-	if a < b {
+	if a <= b {
 		return a
 	}
 	return b
 }
 
 func Max(a, b float32) float32 {
-	if a > b {
+	if a >= b {
 		return a
 	}
 	return b

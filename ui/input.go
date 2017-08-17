@@ -35,6 +35,12 @@ type Mouse struct {
 	Capture func(*Context) (done bool)
 }
 
+func (mouse *Mouse) SetCaptureCursor(cursor Cursor) {
+	if mouse.Cursor == ArrowCursor {
+		mouse.Cursor = cursor
+	}
+}
+
 func (mouse *Mouse) BeginFrame() {
 	mouse.Cursor = ArrowCursor
 	mouse.Pressed = !mouse.Last.Down && mouse.Down
