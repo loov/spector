@@ -13,9 +13,9 @@ type Joiner struct {
 	splitArea g.Rect
 	limit     g.Rect
 
-	canMergeTop   bool
-	canMergeRight bool
-	canFullscreen bool
+	canMergeVertically   bool
+	canMergeHorizontally bool
+	canFullscreen        bool
 }
 
 func (act *Joiner) init(ctx *ui.Context) {
@@ -27,7 +27,17 @@ func (act *Joiner) init(ctx *ui.Context) {
 		Max: bottom.Pos,
 	}
 
-	// TODO: can *
+	if act.Corner.SideRight() != nil {
+		_, bottomBlockLeft := act.Corner.BlockingVertical(true, false)
+		_, bottomBlockRight := act.Corner.BlockingVertical(false, true)
+		act.canMergeHorizontally = bottomBlockLeft == bottomBlockRight
+	}
+
+	if act.Corner.SideTop() != nil {
+		leftBlockTop, _ := act.Corner.BlockingHorizontal(true, false)
+		leftBlockBottom, _ := act.Corner.BlockingHorizontal(false, true)
+		act.canMergeVertically = leftBlockTop == leftBlockBottom
+	}
 }
 
 func (act *Joiner) Capture(ctx *ui.Context) bool {
@@ -53,12 +63,12 @@ func (act *Joiner) Capture(ctx *ui.Context) bool {
 	}
 
 	// merge to right
-	if 0 < delta.X && 0 < delta.Y && act.canMergeRight {
+	if 0 < delta.X && 0 < delta.Y && act.canMergeHorizontally {
 		return false
 	}
 
 	// merge to top
-	if delta.X < 0 && delta.Y < 0 && act.canMergeTop {
+	if delta.X < 0 && delta.Y < 0 && act.canMergeVertically {
 		return false
 	}
 
