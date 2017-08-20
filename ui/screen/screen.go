@@ -34,7 +34,6 @@ func (screen *Screen) Update(ctx *ui.Context) {
 		canCapture := !corner.IsLocked() && ctx.Input.Mouse.Capture == nil && r.Contains(ctx.Input.Mouse.Pos)
 		if canCapture {
 			ctx.Input.Mouse.SetCaptureCursor(ui.CrosshairCursor)
-			ctx.Draw.FillRect(&r, RigCornerHighlightColor)
 			if ctx.Input.Mouse.Pressed {
 				ctx.Input.Mouse.Capture = (&Resizer{
 					Screen:     screen,
@@ -43,8 +42,6 @@ func (screen *Screen) Update(ctx *ui.Context) {
 					Vertical:   corner.Vertical,
 				}).Capture
 			}
-		} else {
-			ctx.Draw.FillRect(&r, RigCornerColor)
 		}
 
 		if corner.SideLeft() != nil && corner.SideBottom() != nil {

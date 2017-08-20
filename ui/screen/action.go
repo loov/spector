@@ -75,7 +75,6 @@ func (act *Joiner) trySplit(ctx *ui.Context, delta g.Vector) bool {
 	dy := delta.Y
 
 	r := act.Screen.Bounds.Subset(act.splitArea)
-	ctx.Hover.FillRect(&r, g.Color{0xFF, 0, 0, 0x20})
 
 	if dx < dy {
 		// do we have enough room for two areas?
@@ -194,7 +193,7 @@ func (act *Resizer) Capture(ctx *ui.Context) bool {
 		return true
 	}
 
-	ctx.Hover.FillRect(&limiter, g.Color{0xFF, 0, 0, 0x20})
+	ctx.Hover.StrokeRect(&limiter, 2, g.Color{0x0, 0, 0, 0x20})
 
 	clampedMouse := limiter.ClosestPoint(ctx.Input.Mouse.Pos)
 	p := act.Screen.Bounds.ToRelative(clampedMouse)
