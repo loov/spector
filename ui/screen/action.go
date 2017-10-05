@@ -64,12 +64,12 @@ func (act *Joiner) Capture(ctx *ui.Context) bool {
 
 	// merge to right
 	if 0 < delta.X && 0 < delta.Y && act.canMergeHorizontally {
-		return false
+		return act.tryMerge(ctx, delta)
 	}
 
 	// merge to top
 	if delta.X < 0 && delta.Y < 0 && act.canMergeVertically {
-		return false
+		return act.tryMerge(ctx, delta)
 	}
 
 	// fullscreen on release
@@ -128,6 +128,61 @@ func (act *Joiner) trySplit(ctx *ui.Context, delta g.Vector) bool {
 		ctx.Hover.FillRect(&r, RigBackground.WithAlpha(alpha))
 
 		if dx > RigTriggerSize {
+			// TODO: fix don't use mouse pos, it might be outside of limits
+			rp := act.Screen.Bounds.ToRelative(ctx.Input.Mouse.Pos)
+			split := act.Screen.Rig.SplitVertically(act.Corner, rp.X)
+			ctx.Input.Mouse.Capture = (&Resizer{
+				Screen:     act.Screen,
+				Start:      split.Center(),
+				Horizontal: nil,
+				Vertical:   split,
+			}).Capture
+		}
+	}
+
+	return false
+}
+
+func (act *Joiner) tryMerge(ctx *ui.Context, delta g.Vector) bool {
+	dx := delta.X
+	dy := -delta.Y
+
+	r := act.Screen.Bounds.Subset(act.splitArea)
+	if dx >= 0 {
+		// do we have enough room for two areas?
+		ctx.Input.Mouse.Cursor = ui.CrosshairCursor
+
+		r.Min.X = r.Max.X
+		r.Max.X += dx
+
+		alpha := g.Sat8((dx - RigJoinerSize) / (RigTriggerSize - RigJoinerSize))
+		ctx.Hover.FillRect(&r, RigBackground.WithAlpha(alpha))
+		// TODO: draw arrow
+
+		if false && dy > RigTriggerSize {
+			// TODO: fix don't use mouse pos, it might be outside of limits
+			rp := act.Screen.Bounds.ToRelative(ctx.Input.Mouse.Pos)
+			split := act.Screen.Rig.SplitHorizontally(act.Corner, rp.Y)
+			ctx.Input.Mouse.Capture = (&Resizer{
+				Screen:     act.Screen,
+				Start:      split.Center(),
+				Horizontal: split,
+				Vertical:   nil,
+			}).Capture
+		}
+	}
+
+	if dy >= 0 {
+		ctx.Input.Mouse.Cursor = ui.CrosshairCursor
+
+		r.Max.Y = r.Min.Y
+		r.Min.Y -= dy
+
+		alpha := g.Sat8((dy - RigJoinerSize) / (RigTriggerSize - RigJoinerSize))
+		ctx.Hover.FillRect(&r, RigBackground.WithAlpha(alpha))
+		// TODO: draw arrow
+
+		if false && dx > RigTriggerSize {
 			// TODO: fix don't use mouse pos, it might be outside of limits
 			rp := act.Screen.Bounds.ToRelative(ctx.Input.Mouse.Pos)
 			split := act.Screen.Rig.SplitVertically(act.Corner, rp.X)

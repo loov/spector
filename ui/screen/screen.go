@@ -105,15 +105,6 @@ func (screen *Screen) Update(ctx *ui.Context) {
 	}
 }
 
-func NewTestArea(screen *Screen) *Area {
-	child := NewArea(screen)
-	child.Editor = &Editor{
-		Area:  child,
-		Color: g.RandColor(0.9, 0.9),
-	}
-	return child
-}
-
 type Editor struct {
 	Area   *Area
 	Bounds g.Rect
