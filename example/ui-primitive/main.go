@@ -11,8 +11,6 @@ import (
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
 
-	"github.com/egonelbre/exp/qpc"
-
 	"github.com/egonelbre/spector/ui/draw"
 	"github.com/egonelbre/spector/ui/g"
 	render "github.com/egonelbre/spector/ui/render/gl21"
@@ -69,7 +67,7 @@ func main() {
 
 	drawlist := draw.NewList()
 	for !window.ShouldClose() {
-		start := qpc.Now()
+		start := time.Now()
 		if window.GetKey(glfw.KeyEscape) == glfw.Press {
 			return
 		}
@@ -133,13 +131,13 @@ func main() {
 		if err := gl.GetError(); err != 0 {
 			fmt.Println(err)
 		}
-		stop := qpc.Now()
+		stop := time.Now()
 
 		window.SwapBuffers()
 		runtime.GC()
 		glfw.PollEvents()
 
-		fmt.Printf("%-10.3f\n", stop.Sub(start).Duration().Seconds()*1000)
+		fmt.Printf("%-10.3f\n", stop.Sub(start))
 	}
 
 }
