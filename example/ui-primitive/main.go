@@ -67,7 +67,6 @@ func main() {
 
 	drawlist := draw.NewList()
 	for !window.ShouldClose() {
-		start := time.Now()
 		if window.GetKey(glfw.KeyEscape) == glfw.Press {
 			return
 		}
@@ -87,19 +86,15 @@ func main() {
 
 		drawlist.Reset()
 
-		drawlist.AddRectFill(&g.Rect{
-			g.Vector{10, 10},
-			g.Vector{50, 50},
-		}, g.Red)
+		drawlist.FillRect(&g.Rect{g.V(10, 10), g.V(50, 50)}, g.Red)
 
 		CircleRadius := float32(50.0 * math.Sin(now*1.3))
-		drawlist.AddCircle(
-			g.Vector{100, 100}, CircleRadius, g.Red)
-		drawlist.AddArc(
-			g.Vector{200, 100}, CircleRadius/2+50,
+		drawlist.FillCircle(g.V(100, 100), CircleRadius, g.Red)
+		drawlist.FillArc(
+			g.V(200, 100), CircleRadius/2+50,
 			float32(now),
 			float32(math.Sin(now)*10),
-			g.HSL(float32(math.Sin(now*0.3)), 0.8, 0.5))
+			g.HSLA(float32(math.Sin(now*0.3)), 0.8, 0.5, 0.3))
 
 		LineWidth := float32(math.Sin(now*2.1)*5 + 5)
 
@@ -110,8 +105,8 @@ func main() {
 			line[i].X = float32(r) * float32(width)
 			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now)*100)
 		}
-		drawlist.AddLine(line[:], LineWidth,
-			g.HSL(float32(math.Sin(now*0.3)), 0.6, 0.6))
+		drawlist.StrokeLine(line[:], LineWidth,
+			g.HSLA(float32(math.Sin(now*0.3)), 0.6, 0.6, 0.5))
 
 		CircleCount := int(width / 8)
 		circle := make([]g.Vector, CircleCount)
@@ -123,21 +118,32 @@ func main() {
 			circle[i].Y = float32(height)*0.5 + float32(math.Sin(a)*w)
 		}
 
+		y := float32(64.0)
+		for lineWidth := float32(1.0); lineWidth < 64; lineWidth *= 2 {
+			drawlist.StrokeLine(
+				[]g.Vector{
+					g.V(240+50, y),
+					g.V(240+100, y-16),
+					g.V(240+150, y+16),
+					g.V(240+200, y-16),
+					g.V(240+100, y-64),
+				}, lineWidth, g.HSLA(90, 0.6, 0.6, 0.5),
+			)
+			y += 80
+		}
+
 		// drawlist.PushClip(g.Rect(0, 0, float32(width)/2, float32(height)/2))
-		drawlist.AddClosedLine(circle[:], LineWidth, g.Green)
+		drawlist.StrokeClosedLine(circle[:], LineWidth, g.HSLA(0, 0.6, 0.6, 0.5))
 		// drawlist.PopClip()
 
 		render.List(width, height, drawlist)
 		if err := gl.GetError(); err != 0 {
 			fmt.Println(err)
 		}
-		stop := time.Now()
 
 		window.SwapBuffers()
 		runtime.GC()
 		glfw.PollEvents()
-
-		fmt.Printf("%-10.3f\n", stop.Sub(start))
 	}
 
 }
