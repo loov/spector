@@ -121,11 +121,9 @@ func (list *List) StrokeColoredLine(points []g.Vector, thickness float32, colors
 
 				dot := xn.Rotate().Dot(abn)
 				if dot < 0 {
-					xacolor := acolor.Lerp(bcolor, 0.5)
-					list.Primitive_TriColor(b1, x1, x, bcolor, acolor, xacolor)
+					list.Primitive_Tri(b1, x1, x, bcolor)
 				} else if dot > 0 {
-					xacolor := acolor.Lerp(bcolor, 0.5)
-					list.Primitive_TriColor(b2, x, x2, bcolor, xacolor, acolor)
+					list.Primitive_Tri(b2, x, x2, bcolor)
 				}
 			}
 		}
