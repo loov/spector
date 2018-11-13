@@ -99,12 +99,14 @@ func main() {
 		LineWidth := float32(math.Sin(now*2.1)*10 + 10)
 		LineCount := int(width / 8)
 		line := make([]g.Vector, LineCount)
+		linecolor := make([]g.Color, LineCount)
 		for i := range line {
 			r := float64(i) / float64(LineCount-1)
 			line[i].X = float32(r) * float32(width)
 			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now)*100)
+			linecolor[i] = g.HSLA(float32(r), 0.6, 0.6, g.Sin(float32(r)*30)*0.25+0.5)
 		}
-		drawlist.StrokeLine(line[:], LineWidth, g.HSLA(float32(math.Sin(now*0.3)), 0.6, 0.6, 0.5))
+		drawlist.StrokeColoredLine(line[:], LineWidth, linecolor)
 
 		y := float32(64.0)
 		for lineWidth := float32(1.0); lineWidth < 64; lineWidth *= 2 {
@@ -131,7 +133,7 @@ func main() {
 		}
 
 		// drawlist.PushClip(g.Rect(0, 0, float32(width)/2, float32(height)/2))
-		drawlist.StrokeClosedLine(circle[:], 20, g.HSLA(0, 0.6, 0.6, 0.5))
+		drawlist.StrokeClosedLine(circle, 20, g.HSLA(0, 0.6, 0.6, 0.5))
 		// drawlist.PopClip()
 
 		render.List(width, height, drawlist)

@@ -70,6 +70,76 @@ func (list *List) StrokeLine(points []g.Vector, thickness float32, color g.Color
 	list.CurrentCommand.Count += Index(len(list.Indicies) - startIndexCount)
 }
 
+func (list *List) StrokeColoredLine(points []g.Vector, thickness float32, colors []g.Color) {
+	if len(points) < 2 || thickness == 0 || len(colors) != len(points) {
+		return
+	}
+
+	// TODO: optimize for thin line
+	startIndexCount := len(list.Indicies)
+
+	R := g.Abs(thickness / 2.0)
+	R2 := R * R
+	s2R2 := g.Sqrt2 * R2
+
+	// draw each segment, where
+	// ---------^--------x1-------^---------b1
+	// |        | xn     |        | abn      |
+	// | - - - - - - - - a - - - - - - - - - b
+	// |                 |                   |
+	// ------------------x2-----------------b2
+	// x1, x2, xn are the previous segments end corners and normal
+	x, b := points[0], points[1]
+	acolor := colors[0]
+	xn := g.SegmentNormal(x, b).ScaleTo(R)
+	x1, x2 := x.Add(xn), x.Sub(xn)
+
+	for i, b := range points[1:] {
+		bcolor := colors[i+1]
+		abn := g.SegmentNormal(x, b).ScaleTo(R)
+
+		dot := xn.Dot(abn)
+		if dot == 0 { // straight segment
+			b1, b2 := b.Add(xn), b.Sub(xn)
+			list.Primitive_QuadColor(x1, b1, b2, x2, acolor, bcolor, bcolor, acolor)
+			x1, x2 = b1, b2
+		} else {
+			scale := s2R2 / g.Sqrt(xn.Dot(abn)+R2)
+			if scale < 2*R {
+				// corner without chamfer
+				xabn := xn.Add(abn)
+				pbcn := xabn.ScaleTo(scale)
+				b1, b2 := x.Add(pbcn), x.Sub(pbcn)
+				list.Primitive_QuadColor(x1, b1, b2, x2, acolor, bcolor, bcolor, acolor)
+				x1, x2 = b1, b2
+			} else {
+				// corner with chamfer and overlap
+				b1, b2 := x.Add(xn), x.Sub(xn)
+				list.Primitive_QuadColor(x1, b1, b2, x2, acolor, bcolor, bcolor, acolor)
+
+				x1, x2 = x.Add(abn), x.Sub(abn)
+
+				dot := xn.Rotate().Dot(abn)
+				if dot < 0 {
+					xacolor := acolor.Lerp(bcolor, 0.5)
+					list.Primitive_TriColor(b1, x1, x, bcolor, acolor, xacolor)
+				} else if dot > 0 {
+					xacolor := acolor.Lerp(bcolor, 0.5)
+					list.Primitive_TriColor(b2, x, x2, bcolor, xacolor, acolor)
+				}
+			}
+		}
+
+		x, xn, acolor = b, abn, bcolor
+	}
+
+	xcolor := colors[len(colors)-2]
+	b1, b2 := x.Add(xn), x.Sub(xn)
+	list.Primitive_QuadColor(x1, b1, b2, x2, xcolor, acolor, acolor, xcolor)
+
+	list.CurrentCommand.Count += Index(len(list.Indicies) - startIndexCount)
+}
+
 func (list *List) StrokeClosedLine(points []g.Vector, thickness float32, color g.Color) {
 	if len(points) < 2 || color.Transparent() || thickness == 0 {
 		return

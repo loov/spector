@@ -90,3 +90,29 @@ func (list *List) Primitive_QuadUV(q *[4]g.Vector, uv *g.Rect, color g.Color) {
 		Vertex{d, uv_d, color},
 	)
 }
+
+func (list *List) Primitive_QuadColor(a, b, c, d g.Vector, acolor, bcolor, ccolor, dcolor g.Color) {
+	base := Index(len(list.Vertices))
+	list.Indicies = append(list.Indicies,
+		base+0, base+1, base+2,
+		base+0, base+2, base+3,
+	)
+	list.Vertices = append(list.Vertices,
+		Vertex{a, NoUV, acolor},
+		Vertex{b, NoUV, bcolor},
+		Vertex{c, NoUV, ccolor},
+		Vertex{d, NoUV, dcolor},
+	)
+}
+
+func (list *List) Primitive_TriColor(a, b, c g.Vector, acolor, bcolor, ccolor g.Color) {
+	base := Index(len(list.Vertices))
+	list.Indicies = append(list.Indicies,
+		base+0, base+1, base+2,
+	)
+	list.Vertices = append(list.Vertices,
+		Vertex{a, NoUV, acolor},
+		Vertex{b, NoUV, bcolor},
+		Vertex{c, NoUV, ccolor},
+	)
+}
