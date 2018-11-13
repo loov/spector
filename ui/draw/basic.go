@@ -1,49 +1,71 @@
 package draw
 
-import "github.com/egonelbre/spector/ui/g"
+import (
+	"github.com/egonelbre/spector/ui/g"
+)
 
 func (list *List) StrokeLine(points []g.Vector, thickness float32, color g.Color) {
 	if len(points) < 2 || color.Transparent() || thickness == 0 {
 		return
 	}
 
+	// TODO: optimize for thin line
 	startIndexCount := len(list.Indicies)
 
 	R := g.Abs(thickness / 2.0)
-
-	a := points[0]
-	var x1, x2, xn g.Vector
+	R2 := R * R
+	s2R2 := g.Sqrt2 * R2
 
 	// draw each segment, where
-	// a1-------^---------b1
-	// |        | abn      |
-	// a - - - - - - - - - b
-	// |                   |
-	// a2-----------------b2
+	// x1-------^--------a1-------^---------b1
+	// |        | xn     |        | abn      |
+	// | - - - - - - - - a - - - - - - - - - b
+	// |                 |                   |
+	// x2----------------a2-----------------b2
 	// x1, x2, xn are the previous segments end corners and normal
-	for i, b := range points[1:] {
-		// segment normal
+	a, b := points[0], points[1]
+	xn := g.SegmentNormal(a, b).ScaleTo(R)
+	x1, x2 := a.Add(xn), a.Sub(xn)
+
+	for _, b := range points[1:] {
 		abn := g.SegmentNormal(a, b).ScaleTo(R)
-		// segment corners
-		a1, a2 := a.Add(abn), a.Sub(abn)
-		b1, b2 := b.Add(abn), b.Sub(abn)
 
-		if i > 0 && R > 1.5 {
-			// draw segment chamfer
-			d := xn.Rotate().Dot(abn)
-			if d < 0 {
-				list.Primitive_Tri(x1, a1, a, color)
-			} else if d > 0 {
-				list.Primitive_Tri(x2, a2, a, color)
+		dot := xn.Dot(abn)
+		if dot == 0 { // straight segment
+			b1, b2 := b.Add(xn), b.Sub(xn)
+			list.Primitive_Quad(x1, b1, b2, x2, color)
+			x1, x2 = b1, b2
+		} else {
+			scale := s2R2 / g.Sqrt(xn.Dot(abn)+R2)
+			if scale < 2*R {
+				// corner without chamfer
+				xabn := xn.Add(abn)
+				pbcn := xabn.ScaleTo(scale)
+				b1, b2 := a.Add(pbcn), a.Sub(pbcn)
+				list.Primitive_Quad(x1, b1, b2, x2, color)
+				x1, x2 = b1, b2
+			} else {
+				// corner with chamfer and overlap
+				b1, b2 := a.Add(xn), a.Sub(xn)
+				list.Primitive_Quad(x1, b1, b2, x2, color)
 
+				x1, x2 = a.Add(abn), a.Sub(abn)
+
+				dot := xn.Rotate().Dot(abn)
+				if dot < 0 {
+					list.Primitive_Tri(b1, x1, a, color)
+				} else if dot > 0 {
+					list.Primitive_Tri(b2, a, x2, color)
+				}
 			}
 		}
-		// draw block segment
-		list.Primitive_Quad(a1, b1, b2, a2, color)
 
-		a = b
-		x1, x2, xn = b1, b2, abn
+		a, xn = b, abn
 	}
+
+	a, b = points[len(points)-2], points[len(points)-1]
+	b1, b2 := b.Add(xn), b.Sub(xn)
+	list.Primitive_Quad(x1, b1, b2, x2, color)
 
 	list.CurrentCommand.Count += Index(len(list.Indicies) - startIndexCount)
 }
@@ -60,40 +82,91 @@ func (list *List) StrokeClosedLine(points []g.Vector, thickness float32, color g
 	startIndexCount := len(list.Indicies)
 
 	R := g.Abs(thickness / 2.0)
-	a := points[len(points)-1]
-	xn := g.SegmentNormal(points[len(points)-2], a).ScaleTo(R)
-	x1, x2 := a.Add(xn), a.Sub(xn)
+	R2 := R * R
+	s2R2 := g.Sqrt2 * R2
 
 	// draw each segment, where
-	// a1-------^---------b1
-	// |        | abn      |
-	// a - - - - - - - - - b
-	// |                   |
-	// a2-----------------b2
+	// x1-------^--------a1-------^---------b1
+	// |        | xn     |        | abn      |
+	// | - - - - - - - - a - - - - - - - - - b
+	// |                 |                   |
+	// x2----------------a2-----------------b2
 	// x1, x2, xn are the previous segments end corners and normal
-	for _, b := range points {
-		// segment normal
-		abn := g.SegmentNormal(a, b).ScaleTo(R)
-		// segment corners
-		a1, a2 := a.Add(abn), a.Sub(abn)
-		b1, b2 := b.Add(abn), b.Sub(abn)
+	var x1, x2 g.Vector
 
-		// draw segment chamfer
-		if R > 1.5 {
-			d := xn.Rotate().Dot(abn)
-			if d < 0 {
-				list.Primitive_Tri(x1, a1, a, color)
-			} else if d > 0 {
-				list.Primitive_Tri(x2, a2, a, color)
+	x, a, b := points[len(points)-1], points[0], points[1]
+	xn := g.SegmentNormal(x, a).ScaleTo(R)
+	abn := g.SegmentNormal(a, b).ScaleTo(R)
+
+	var t1, t2 g.Vector
+	dot := xn.Dot(abn)
+	if dot == 0 { // straight segment
+		x1, x2 = a.Add(xn), a.Sub(xn)
+		t1, t2 = x1, x2
+	} else {
+		scale := s2R2 / g.Sqrt(dot+R2)
+		if scale < 2*R {
+			// corner without chamfer
+			xabn := xn.Add(abn)
+			pbcn := xabn.ScaleTo(scale)
+			x1, x2 = a.Add(pbcn), a.Sub(pbcn)
+			t1, t2 = x1, x2
+		} else {
+			// corner with chamfer and overlap
+			t1, t2 = a.Add(xn), a.Sub(xn)
+			x1, x2 = a.Add(abn), a.Sub(abn)
+
+			dot := xn.Rotate().Dot(abn)
+			if dot < 0 {
+				list.Primitive_Tri(t1, x1, a, color)
+			} else if dot > 0 {
+				list.Primitive_Tri(t2, a, x2, color)
+			}
+		}
+	}
+
+	for i := 1; i < len(points)+1; i++ {
+		var b g.Vector
+		if i >= len(points) {
+			b = points[0]
+		} else {
+			b = points[i]
+		}
+
+		abn := g.SegmentNormal(a, b).ScaleTo(R)
+		dot := xn.Dot(abn)
+		if dot == 0 { // straight segment
+			b1, b2 := b.Add(xn), b.Sub(xn)
+			list.Primitive_Quad(x1, b1, b2, x2, color)
+			x1, x2 = b1, b2
+		} else {
+			scale := s2R2 / g.Sqrt(dot+R2)
+			if scale < 2*R {
+				// corner without chamfer
+				xabn := xn.Add(abn)
+				pbcn := xabn.ScaleTo(scale)
+				b1, b2 := a.Add(pbcn), a.Sub(pbcn)
+				list.Primitive_Quad(x1, b1, b2, x2, color)
+				x1, x2 = b1, b2
+			} else {
+				// corner with chamfer and overlap
+				b1, b2 := a.Add(xn), a.Sub(xn)
+				list.Primitive_Quad(x1, b1, b2, x2, color)
+
+				x1, x2 = a.Add(abn), a.Sub(abn)
+
+				dot := xn.Rotate().Dot(abn)
+				if dot < 0 {
+					list.Primitive_Tri(b1, x1, a, color)
+				} else if dot > 0 {
+					list.Primitive_Tri(b2, a, x2, color)
+				}
 			}
 		}
 
-		// draw block segment
-		list.Primitive_Quad(a1, b1, b2, a2, color)
-
-		a = b
-		x1, x2, xn = b1, b2, abn
+		a, xn = b, abn
 	}
+	list.Primitive_Quad(x1, t1, t2, x2, color)
 
 	list.CurrentCommand.Count += Index(len(list.Indicies) - startIndexCount)
 }

@@ -96,8 +96,7 @@ func main() {
 			float32(math.Sin(now)*10),
 			g.HSLA(float32(math.Sin(now*0.3)), 0.8, 0.5, 0.3))
 
-		LineWidth := float32(math.Sin(now*2.1)*5 + 5)
-
+		LineWidth := float32(math.Sin(now*2.1)*10 + 10)
 		LineCount := int(width / 8)
 		line := make([]g.Vector, LineCount)
 		for i := range line {
@@ -105,18 +104,7 @@ func main() {
 			line[i].X = float32(r) * float32(width)
 			line[i].Y = float32(height)*0.5 + float32(math.Sin(r*11.8+now)*100)
 		}
-		drawlist.StrokeLine(line[:], LineWidth,
-			g.HSLA(float32(math.Sin(now*0.3)), 0.6, 0.6, 0.5))
-
-		CircleCount := int(width / 8)
-		circle := make([]g.Vector, CircleCount)
-		for i := range circle {
-			p := float64(i) / float64(CircleCount)
-			a := now + p*math.Pi*2
-			w := math.Sin(p*62)*20.0 + 100.0
-			circle[i].X = float32(width)*0.5 + float32(math.Cos(a)*w)
-			circle[i].Y = float32(height)*0.5 + float32(math.Sin(a)*w)
-		}
+		drawlist.StrokeLine(line[:], LineWidth, g.HSLA(float32(math.Sin(now*0.3)), 0.6, 0.6, 0.5))
 
 		y := float32(64.0)
 		for lineWidth := float32(1.0); lineWidth < 64; lineWidth *= 2 {
@@ -132,8 +120,18 @@ func main() {
 			y += 80
 		}
 
+		CircleCount := int(width / 8)
+		circle := make([]g.Vector, CircleCount)
+		for i := range circle {
+			p := float64(i) / float64(CircleCount)
+			a := p * g.Tau
+			w := math.Sin(a*10)*20.0 + 100.0
+			circle[i].X = float32(width)*0.5 + float32(math.Cos(a)*w)
+			circle[i].Y = float32(height)*0.5 + float32(math.Sin(a)*w)
+		}
+
 		// drawlist.PushClip(g.Rect(0, 0, float32(width)/2, float32(height)/2))
-		drawlist.StrokeClosedLine(circle[:], LineWidth, g.HSLA(0, 0.6, 0.6, 0.5))
+		drawlist.StrokeClosedLine(circle[:], 20, g.HSLA(0, 0.6, 0.6, 0.5))
 		// drawlist.PopClip()
 
 		render.List(width, height, drawlist)

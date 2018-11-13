@@ -3,8 +3,9 @@ package g
 import "math"
 
 const (
-	Pi  = math.Pi
-	Tau = 2 * math.Pi
+	Pi    = math.Pi
+	Tau   = 2 * math.Pi
+	Sqrt2 = math.Sqrt2
 )
 
 func Pow(base, e float32) float32 { return float32(math.Pow(float64(base), float64(e))) }
