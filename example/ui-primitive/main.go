@@ -72,7 +72,7 @@ func main() {
 		}
 
 		now := float64(time.Now().UnixNano()-startnano) / 1e9
-		width, height := window.GetSize()
+		width, height := window.GetFramebufferSize()
 
 		{ // reset window
 			gl.MatrixMode(gl.MODELVIEW)
