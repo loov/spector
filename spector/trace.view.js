@@ -88,12 +88,17 @@ package("spector.Trace", function(){
 
 
 	function View(){
-
+		this.lastEnd = 0;
 	}
 
 	View.prototype = {
 		render: function(ctx, trace, size){
 			var ui = new UI(ctx, size, trace);
+			this.lastEnd = (this.lastEnd + ui.end) / 2;
+			// modify end
+			ui.end = this.lastEnd;
+			ui.timespan  = ui.end - ui.begin;
+			ui.px    = ui.timespan / size.x;
 
 			ui.font("Courier New");
 			ui.h1(trace.totalEventCount, 18, "#fff", "#000");
