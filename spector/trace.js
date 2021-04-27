@@ -1,6 +1,3 @@
-<link rel="import" href="/spector/protocol.html">
-<link rel="import" href="/spector/stream.html">
-<script>
 package("spector", function(){
 	"use strict";
 	// Trace is the ViewModel for main display
@@ -284,4 +281,3 @@ package("spector", function(){
 		Trace: Trace
 	};
 });
-</script>

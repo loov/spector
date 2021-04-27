@@ -1,8 +1,6 @@
-
-<!-- GENERATED CODE -->
-<!-- DO NOT MODIFY MANUALLY -->
-<script>
 package("spector", function(){
+	"use strict";
+
 	var Event = {};
 	var EventByCode = {};
 	var EventCode = {};
@@ -407,4 +405,3 @@ package("spector", function(){
 		ContentKind: ContentKind
 	};
 })
-</script>

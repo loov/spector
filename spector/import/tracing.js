@@ -1,7 +1,3 @@
-<link rel="import" href="/spector/stream.html">
-<link rel="import" href="/spector/protocol.html">
-
-<script>
 package("spector.import.tracing", function(){
 	function Stream(data) {
 		this.stage = spector.Stream.Stage.Reading;
@@ -20,4 +16,3 @@ package("spector.import.tracing", function(){
 		Stream: Stream
 	};
 });
-</script>

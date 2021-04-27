@@ -1,8 +1,3 @@
-<link rel="import" href="/spector/protocol.html">
-<link rel="import" href="/spector/stream.html">
-<link rel="import" href="/spector/trace.html">
-
-<script>
 package("spector.Trace", function(){
 	"use strict";
 
@@ -145,4 +140,3 @@ package("spector.Trace", function(){
 		View: View
 	};
 });
-</script>

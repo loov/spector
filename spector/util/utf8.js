@@ -1,5 +1,6 @@
-<script>
 package("spector.util.utf8", function() {
+	"use strict";
+
 	var chr = String.fromCharCode;
 	function decode(data) {
 		var out = [], p = 0, d = 0;
@@ -61,4 +62,3 @@ package("spector.util.utf8", function() {
 		encode: encode
 	}
 });
-</script>

@@ -1,6 +1,3 @@
-<link rel="import" href="/spector/stream.html">
-<link rel="import" href="/spector/protocol.html">
-<script>
 package("spector.import.simulator", function(){
 	function R(probability){ return Math.random() < probability; }
 
@@ -152,4 +149,3 @@ package("spector.import.simulator", function(){
 		Stream: Stream
 	};
 });
-</script>
